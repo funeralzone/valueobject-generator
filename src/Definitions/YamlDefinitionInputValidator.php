@@ -69,7 +69,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     private function validateModel(array $definitionInput): array
     {
         $modelPaths = [];
-        if (array_key_exists('model', $definitionInput)) {
+        if (array_key_exists('model', $definitionInput) && is_array($definitionInput['model'])) {
             $internallyExportedModels = [];
             foreach ($definitionInput['model'] as $modelName => $modelDefinition) {
                 $internallyExportedModels = array_merge(
@@ -85,7 +85,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                 );
             }
         } else {
-            $this->errors[] = '"model" has not been defined';
+            $this->errors[] = '"model" has not been defined or is empty';
         }
         return $modelPaths;
     }
@@ -275,7 +275,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
 
     private function validateEvents(array $modelPaths, array $definitionInput): void
     {
-        if (array_key_exists('events', $definitionInput)) {
+        if (array_key_exists('events', $definitionInput) && is_array($definitionInput['events'])) {
             foreach ($definitionInput['events'] as $eventName => $eventDefinition) {
                 $this->validateEventElement($modelPaths, $eventName, $eventDefinition);
             }
