@@ -1,0 +1,10 @@
+
+vendor/
+dev/output/*
+src/Application/GraphQL/Schema/schemaCache\.php
+
+\.idea/
+
+clover\.xml
+
+coverage-report/
