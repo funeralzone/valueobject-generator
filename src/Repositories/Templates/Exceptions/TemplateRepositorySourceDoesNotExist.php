@@ -7,6 +7,6 @@ final class TemplateRepositorySourceDoesNotExist extends \Exception
 {
     public function __construct(string $source)
     {
-        parent::__construct('The template repository source "%s" does not exist', $source);
+        parent::__construct(sprintf('The template repository source "%s" does not exist', $source));
     }
 }

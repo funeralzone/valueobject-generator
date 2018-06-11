@@ -7,6 +7,6 @@ final class TemplateDoesNotExist extends \Exception
 {
     public function __construct(string $template)
     {
-        parent::__construct('The template "%s" does not exist', $template);
+        parent::__construct(sprintf('The template "%s" does not exist', $template));
     }
 }

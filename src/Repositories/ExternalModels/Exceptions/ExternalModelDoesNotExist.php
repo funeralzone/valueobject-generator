@@ -8,6 +8,6 @@ final class ExternalModelDoesNotExist extends \Exception
 {
     public function __construct(string $type)
     {
-        parent::__construct('The external model "%s" does not exist', $type);
+        parent::__construct(sprintf('The external model "%s" does not exist', $type));
     }
 }
