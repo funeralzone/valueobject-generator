@@ -240,12 +240,15 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         return $modelPaths;
     }
 
-    private function validateModelSchema(string $modelPath, array $rules, array $modelDefinition): void
-    {
+    private function validateModelSchema(
+        string $modelPath,
+        array $rules,
+        array $modelDefinition
+    ): void {
         foreach (array_keys($modelDefinition) as $key) {
             if (!array_key_exists($key, $rules)) {
                 $this->errors[] = sprintf(
-                    'Model "%s" - "%s" is an invalid property',
+                    'Model "%s" - "%s" is an invalid property or is not allowed in this context',
                     $modelPath,
                     $key
                 );
