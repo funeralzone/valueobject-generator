@@ -15,6 +15,7 @@ final class DefinedModel implements Model
     private $type;
     private $nullable;
     private $propertyName;
+    private $external;
     private $export;
     private $childModels;
     private $properties;
@@ -27,6 +28,7 @@ final class DefinedModel implements Model
         ModelType $type,
         bool $nullable,
         string $propertyName,
+        bool $external,
         bool $export,
         ModelSet $childModels,
         ModelProperties $properties,
@@ -38,6 +40,7 @@ final class DefinedModel implements Model
         $this->type = $type;
         $this->nullable = $nullable;
         $this->propertyName = $propertyName;
+        $this->external = $external;
         $this->export = $export;
         $this->childModels = $childModels;
         $this->properties = $properties;
@@ -79,6 +82,11 @@ final class DefinedModel implements Model
         return $this->nullable;
     }
 
+    public function external(): bool
+    {
+        return $this->external;
+    }
+
     public function export(): bool
     {
         return $this->export;
@@ -91,7 +99,7 @@ final class DefinedModel implements Model
 
     public function creatable(): bool
     {
-        return true;
+        return ! $this->external;
     }
 
     public function properties(): ModelProperties

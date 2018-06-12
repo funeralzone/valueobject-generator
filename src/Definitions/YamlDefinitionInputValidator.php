@@ -28,6 +28,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'referenceName' => 'string',
         'namespace' => 'string',
         'decorator' => 'string',
+        'external' => 'bool',
     ];
 
     private $commonExternalModelSchemaRules = [

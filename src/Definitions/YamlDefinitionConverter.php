@@ -202,6 +202,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $type,
                 (bool)($modelDefinitionInput['nullable'] ?? false),
                 $propertyName,
+                (bool)($modelDefinitionInput['external'] ?? false),
                 (bool)($modelDefinitionInput['export'] ?? false),
                 new ModelSet($childModels),
                 $this->distillModelPropertiesFromSchema($type, $modelDefinitionInput),

@@ -63,6 +63,11 @@ final class LinkedModel implements Model
         return false;
     }
 
+    public function external(): bool
+    {
+        return $this->linkedModel->external();
+    }
+
     public function children(): ModelSet
     {
         return $this->linkedModel->children();

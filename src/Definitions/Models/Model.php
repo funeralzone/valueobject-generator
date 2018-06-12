@@ -16,6 +16,7 @@ interface Model
     public function propertyName(): string;
     public function propertyNameUcFirst(): string;
     public function export(): bool;
+    public function external(): bool;
     public function nullable(): bool;
     public function children(): ModelSet;
     public function creatable(): bool;
