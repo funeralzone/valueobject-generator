@@ -17,6 +17,7 @@ use Funeralzone\ValueObjectGenerator\Repositories\ExternalModels\NullExternalMod
 use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecoratorRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
+use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\NullModelType;
 use Symfony\Component\Yaml\Yaml;
 
 final class YamlDefinitionConverter implements DefinitionConverter
@@ -114,12 +115,16 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $this->distillModelPropertiesFromSchema($existingModel->type(), $modelDefinitionInput, $parentModelType)
             );
         } else {
-            $modelTypeKey = $modelDefinitionInput['type'];
-
+            $external = (bool)($modelDefinitionInput['external'] ?? false);
             $referenceName = $modelDefinitionInput['referenceName'] ?? $modelDefinitionName;
             $instantiationName = $modelDefinitionInput['instantiationName'] ?? $modelDefinitionName;
 
-            $modelType = $this->modelTypeRepository->get((string)$modelTypeKey);
+            if ($external) {
+                $modelType = new NullModelType;
+            } else {
+                $modelTypeKey = $modelDefinitionInput['type'];
+                $modelType = $this->modelTypeRepository->get((string)$modelTypeKey);
+            }
 
             $decoratorName = $modelDefinitionInput['decorator'] ?? null;
             if ($this->modelDecoratorRepository->has((string)$decoratorName)) {
@@ -155,7 +160,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 ),
                 $modelDefinitionName,
                 $modelType,
-                (bool)($modelDefinitionInput['external'] ?? false),
+                $external,
                 new ModelSet($childModels),
                 $this->distillModelPropertiesFromSchema($modelType, $modelDefinitionInput, $parentModelType),
                 $decorator

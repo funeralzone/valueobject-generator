@@ -108,53 +108,58 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                     }
                     $this->validateModelSchema($modelPath, $rules, $modelDefinition);
                 } else {
-                    if (array_key_exists('type', $modelDefinition)) {
-                        $typeKey = $modelDefinition['type'];
+                    $external = (bool) ($modelDefinition['external'] ?? false);
 
-                        if ($this->modelTypeRepository->has($typeKey)) {
-                            $modelType = $this->modelTypeRepository->get($typeKey);
-                            if ($modelHasChildren && !$modelType->allowChildModels()) {
+                    if (! $external) {
+                        if (array_key_exists('type', $modelDefinition)) {
+                            $typeKey = $modelDefinition['type'];
+
+                            if ($this->modelTypeRepository->has($typeKey)) {
+                                $modelType = $this->modelTypeRepository->get($typeKey);
+                                if ($modelHasChildren && !$modelType->allowChildModels()) {
+                                    $this->errors[] = sprintf(
+                                        'Model "%s" - defines children but its type ("%s") does support them',
+                                        $modelPath,
+                                        $typeKey
+                                    );
+                                }
+
+                                $rules = array_merge(
+                                    $this->definedModelSchemaRules,
+                                    $modelType->ownSchemaValidationRules()
+                                );
+                                if ($parentType) {
+                                    $rules = array_merge($rules, $parentType->childSchemaValidationRules());
+                                }
+                                $this->validateModelSchema($modelPath, $rules, $modelDefinition);
+
+                            } else {
                                 $this->errors[] = sprintf(
-                                    'Model "%s" - defines children but its type ("%s") does support them',
+                                    'Model "%s" - defines an unsupported type - "%s"',
                                     $modelPath,
                                     $typeKey
                                 );
                             }
-
-                            $rules = array_merge(
-                                $this->definedModelSchemaRules,
-                                $modelType->ownSchemaValidationRules()
-                            );
-                            if ($parentType) {
-                                $rules = array_merge($rules, $parentType->childSchemaValidationRules());
-                            }
-                            $this->validateModelSchema($modelPath, $rules, $modelDefinition);
-
-                            $decorator = $modelDefinition['decorator'] ?? null;
-                            if ($decorator) {
-                                if (!$this->modelTypeDecoratorRepository->has((string)$decorator)) {
-                                    $this->errors[] = sprintf(
-                                        'Model "%s" - defines a decorator ("%s") but it doesn\'t exist',
-                                        $modelPath,
-                                        $decorator
-                                    );
-                                }
-                            }
-
-                            $existingModelDefinitionNames[] = $modelDefinitionName;
                         } else {
                             $this->errors[] = sprintf(
-                                'Model "%s" - defines an unsupported type - "%s"',
-                                $modelPath,
-                                $typeKey
+                                'Model "%s" - must define a "type"',
+                                $modelPath
                             );
                         }
-                    } else {
-                        $this->errors[] = sprintf(
-                            'Model "%s" - must define a "type"',
-                            $modelPath
-                        );
                     }
+
+                    $decorator = $modelDefinition['decorator'] ?? null;
+                    if ($decorator) {
+                        if (!$this->modelTypeDecoratorRepository->has((string)$decorator)) {
+                            $this->errors[] = sprintf(
+                                'Model "%s" - defines a decorator ("%s") but it doesn\'t exist',
+                                $modelPath,
+                                $decorator
+                            );
+                        }
+                    }
+
+                    $existingModelDefinitionNames[] = $modelDefinitionName;
                 }
 
                 if ($modelHasChildren) {
