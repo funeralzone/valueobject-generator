@@ -228,15 +228,17 @@ final class YamlDefinitionConverter implements DefinitionConverter
         }
 
         $eventMetaItems = [];
-        foreach ($eventDefinitionInput['payload'] as $payloadItem) {
-            $modelName = $payloadItem['name'];
-            $model = $models->getByname($modelName);
+        if (array_key_exists('meta', $eventDefinitionInput)) {
+            foreach ($eventDefinitionInput['meta'] as $metaItem) {
+                $modelName = $metaItem['name'];
+                $model = $models->getByname($modelName);
 
-            $eventMetaItems[] = new EventMetaItem(
-                $model,
-                $payloadItem['propertyName'],
-                $payloadItem['key']
-            );
+                $eventMetaItems[] = new EventMetaItem(
+                    $model,
+                    $metaItem['propertyName'],
+                    $metaItem['key']
+                );
+            }
         }
 
         return new Event(

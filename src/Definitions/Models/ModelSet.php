@@ -45,9 +45,10 @@ final class ModelSet implements Countable
 
     private function indexModelsByName(array $models): array
     {
+        $indexedModels = [];
         foreach ($models as $model) {
             /** @var Model $model */
-            $model[$model->definitionName()] = $model;
+            $indexedModels[$model->definitionName()] = $model;
 
             foreach ($model->children()->all() as $childModel) {
                 $models = array_merge(
@@ -56,7 +57,7 @@ final class ModelSet implements Countable
                 );
             }
         }
-        return $models;
+        return $indexedModels;
     }
 
     private function validateInput(array $models): void
