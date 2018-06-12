@@ -4,17 +4,19 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
 use Countable;
-use Funeralzone\ValueObjectGenerator\Definitions\Models\Exceptions\InvalidModel;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Exceptions\InvalidEventPayloadItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Exceptions\ModelDoesNotExist;
 
 final class ModelSet implements Countable
 {
     private $models;
+    private $modelsByName;
 
     public function __construct(array $models)
     {
         $this->validateInput($models);
         $this->models = $models;
+        $this->modelsByName = $this->indexModelsByName($models);
     }
 
     public function all(): array
@@ -22,19 +24,17 @@ final class ModelSet implements Countable
         return $this->models;
     }
 
-    public function hasPath(array $path): bool
+    public function hasByName(string $name): bool
     {
-        $model = $this->findModel($this, $path);
-        return $model !== null;
+        return array_key_exists($name, $this->modelsByName);
     }
 
-    public function getByPath(array $path): Model
+    public function getByname(string $name): Model
     {
-        $model = $this->findModel($this, $path);
-        if ($model) {
-            return $model;
+        if ($this->hasByName($name)) {
+            return $this->modelsByName[$name];
         } else {
-            throw new ModelDoesNotExist($path);
+            throw new ModelDoesNotExist($name);
         }
     }
 
@@ -43,30 +43,27 @@ final class ModelSet implements Countable
         return count($this->models);
     }
 
-    private function findModel(ModelSet $models, array $path): ?Model
+    private function indexModelsByName(array $models): array
     {
-        $currentPathElement = array_shift($path);
-        $matchingModel = null;
-        foreach ($models->all() as $model) {
+        foreach ($models as $model) {
             /** @var Model $model */
-            if ($model->definitionName() == $currentPathElement) {
-                if (count($path) === 0) {
-                    $matchingModel = $model;
-                    break;
-                } else {
-                    $matchingModel = $this->findModel($model->children(), $path);
-                }
+            $model[$model->definitionName()] = $model;
+
+            foreach ($model->children()->all() as $childModel) {
+                $models = array_merge(
+                    $models,
+                    $this->indexModelsByName($model->children()->all())
+                );
             }
         }
-
-        return $matchingModel;
+        return $models;
     }
 
     private function validateInput(array $models): void
     {
         foreach ($models as $model) {
             if (! $model instanceof Model) {
-                throw new InvalidModel;
+                throw new InvalidEventPayloadItem;
             }
         }
     }

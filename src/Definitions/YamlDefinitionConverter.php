@@ -4,6 +4,10 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Events\Event;
+use Funeralzone\ValueObjectGenerator\Definitions\Events\EventMeta;
+use Funeralzone\ValueObjectGenerator\Definitions\Events\EventMetaItem;
+use Funeralzone\ValueObjectGenerator\Definitions\Events\EventPayload;
+use Funeralzone\ValueObjectGenerator\Definitions\Events\EventPayloadItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Events\EventSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Exceptions\InvalidDefinition;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\DefinedModel;
@@ -11,9 +15,6 @@ use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelProperties;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelSet;
-use Funeralzone\ValueObjectGenerator\Repositories\ExternalModels\ArrayExternalModelRepository;
-use Funeralzone\ValueObjectGenerator\Repositories\ExternalModels\ExternalModelRepository;
-use Funeralzone\ValueObjectGenerator\Repositories\ExternalModels\NullExternalModelRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecoratorRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
@@ -198,10 +199,9 @@ final class YamlDefinitionConverter implements DefinitionConverter
     {
         $events = [];
         if (array_key_exists('events', $parsedDefinitionInput)) {
-            foreach ($parsedDefinitionInput['events'] as $eventName => $eventDefinitionInput) {
+            foreach ($parsedDefinitionInput['events'] as $eventDefinitionInput) {
                 $events[] = $this->convertEventElement(
                     $models,
-                    $eventName,
                     $eventDefinitionInput
                 );
             }
@@ -211,38 +211,43 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
     private function convertEventElement(
         ModelSet $models,
-        string $eventName,
         array $eventDefinitionInput
     ): Event {
 
-        $eventModels = [];
-        foreach ($eventDefinitionInput['payload'] as $modelPath) {
-            $pathElements = explode('\\', $modelPath);
-            $eventModels[] = $models->getByPath($pathElements);
+        $eventName = $eventDefinitionInput['name'];
+
+        $eventPayloadItems = [];
+        foreach ($eventDefinitionInput['payload'] as $payloadItem) {
+            $modelName = $payloadItem['name'];
+            $model = $models->getByname($modelName);
+
+            $eventPayloadItems[] = new EventPayloadItem(
+                $model,
+                $payloadItem['propertyName']
+            );
         }
 
-        $aggregateIdModel = $models->getByPath(explode('\\', $eventDefinitionInput['aggregateIdModel']));
+        $eventMetaItems = [];
+        foreach ($eventDefinitionInput['payload'] as $payloadItem) {
+            $modelName = $payloadItem['name'];
+            $model = $models->getByname($modelName);
+
+            $eventMetaItems[] = new EventMetaItem(
+                $model,
+                $payloadItem['propertyName'],
+                $payloadItem['key']
+            );
+        }
 
         return new Event(
-            new Location(
-                $this->rootNamespace,
-                ['Deltas'],
-                $eventDefinitionInput['commandName'].'Delta'
-            ),
-            new Location(
-                $this->rootNamespace,
-                ['Commands'],
-                $eventDefinitionInput['commandName']
-            ),
             new Location(
                 $this->rootNamespace,
                 ['Events'],
                 $eventName
             ),
             $eventName,
-            $aggregateIdModel,
-            $eventDefinitionInput['commandName'],
-            new ModelSet($eventModels)
+            new EventPayload($eventPayloadItems),
+            new EventMeta($eventMetaItems)
         );
     }
 }

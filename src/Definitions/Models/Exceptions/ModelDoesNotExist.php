@@ -5,8 +5,8 @@ namespace Funeralzone\ValueObjectGenerator\Definitions\Models\Exceptions;
 
 final class ModelDoesNotExist extends \Exception
 {
-    public function __construct(array $path)
+    public function __construct(string $name)
     {
-        parent::__construct(sprintf('The supplied model "%s" does not exist', implode('\\', $path)));
+        parent::__construct(sprintf('The supplied model "%s" does not exist', $name));
     }
 }

@@ -35,8 +35,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     ];
 
     private $eventSchemaRules = [
-        'commandName' => 'required|string',
+        'name' => 'required|string',
+
         'payload' => 'required|array',
+        'payload.*.name' => 'required|string',
+        'payload.*.propertyName' => 'required|string',
+
+        'meta' => 'array',
+        'meta.*.name' => 'required|string',
+        'meta.*.propertyName' => 'required|string',
+        'meta.*.key' => 'required|string',
     ];
 
     public function __construct(
@@ -51,8 +59,8 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     {
         $this->errors = [];
 
-        $modelPaths = $this->validateModel($rawDefinition);
-        $this->validateEvents($modelPaths, $rawDefinition);
+        $modelNames = $this->validateModel($rawDefinition);
+        $this->validateEvents($modelNames, $rawDefinition);
 
         return count($this->errors) == 0;
     }
@@ -64,9 +72,8 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
 
     private function validateModel(array $definitionInput): array
     {
-        $modelPaths = [];
+        $existingModelDefinitionNames = [];
         if (array_key_exists('model', $definitionInput) && is_array($definitionInput['model'])) {
-            $existingModelDefinitionNames = [];
             foreach ($definitionInput['model'] as $modelDefinition) {
                 $existingModelDefinitionNames = array_unique(array_merge(
                     $existingModelDefinitionNames,
@@ -76,7 +83,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         } else {
             $this->errors[] = '"model" has not been defined or is empty';
         }
-        return $modelPaths;
+        return $existingModelDefinitionNames;
     }
 
     private function validateModelElement(
@@ -237,41 +244,41 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         }
     }
 
-    private function validateEvents(array $modelPaths, array $definitionInput): void
+    private function validateEvents(array $modelNames, array $definitionInput): void
     {
         if (array_key_exists('events', $definitionInput) && is_array($definitionInput['events'])) {
-            foreach ($definitionInput['events'] as $eventName => $eventDefinition) {
-                $this->validateEventElement($modelPaths, $eventName, $eventDefinition);
+            foreach ($definitionInput['events'] as $eventDefinition) {
+                $this->validateEventElement($modelNames, $eventDefinition);
             }
         }
     }
 
-    private function validateEventElement(array $modelPaths, string $eventName, array $eventDefinition): void
+    private function validateEventElement(array $modelNames, array $eventDefinition): void
     {
-        if ($this->validateEventSchema($eventName, $this->eventSchemaRules, $eventDefinition)) {
-            $aggregateIdModelPath = $eventDefinition['aggregateIdModel'] ?? null;
-            if (! $aggregateIdModelPath) {
-                $this->errors[] = sprintf(
-                    'Event "%s" - "aggregateModelId" has not been defind',
-                    $eventName
-                );
-            }
-            if (!in_array($aggregateIdModelPath, $modelPaths)) {
-                $this->errors[] = sprintf(
-                    'Event "%s" - "%s" is not a valid model',
-                    $eventName,
-                    $aggregateIdModelPath
-                );
-            }
+        $eventName = $eventDefinition['name'] ?? 'N\A';
 
-            $payload = $eventDefinition['payload'];
-            foreach ($payload as $modelPath) {
-                if (!in_array($modelPath, $modelPaths)) {
+        if ($this->validateEventSchema($eventName, $this->eventSchemaRules, $eventDefinition)) {
+            foreach ($eventDefinition['payload'] as $payloadItem) {
+                $modelName = $payloadItem['name'];
+                if (!in_array($modelName, $modelNames)) {
                     $this->errors[] = sprintf(
                         'Event "%s" - "%s" is not a valid model',
                         $eventName,
-                        $modelPath
+                        $modelName
                     );
+                }
+            }
+
+            if (array_key_exists('meta', $payloadItem)) {
+                foreach ($eventDefinition['meta'] as $metaItem) {
+                    $modelName = $metaItem['name'];
+                    if (!in_array($modelName, $modelNames)) {
+                        $this->errors[] = sprintf(
+                            'Event "%s" - "%s" is not a valid model',
+                            $eventName,
+                            $modelName
+                        );
+                    }
                 }
             }
         }

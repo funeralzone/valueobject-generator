@@ -4,45 +4,24 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions\Events;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Location;
-use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
-use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelSet;
 
 final class Event
 {
-    private $deltaLocation;
-    private $commandLocation;
     private $eventLocation;
     private $definitionName;
-    private $aggregateIdModel;
-    private $commandName;
     private $payload;
+    private $meta;
 
     public function __construct(
-        Location $deltaLocation,
-        Location $commandLocation,
         Location $eventLocation,
         string $definitionName,
-        Model $aggregateIdModel,
-        string $commandName,
-        ModelSet $payload
+        EventPayload $payload,
+        EventMeta $meta
     ) {
-        $this->deltaLocation = $deltaLocation;
-        $this->commandLocation = $commandLocation;
         $this->eventLocation = $eventLocation;
         $this->definitionName = $definitionName;
-        $this->aggregateIdModel = $aggregateIdModel;
-        $this->commandName = $commandName;
         $this->payload = $payload;
-    }
-
-    public function deltaLocation(): Location
-    {
-        return $this->deltaLocation;
-    }
-
-    public function commandLocation(): Location
-    {
-        return $this->commandLocation;
+        $this->meta = $meta;
     }
 
     public function eventLocation(): Location
@@ -50,23 +29,18 @@ final class Event
         return $this->eventLocation;
     }
 
-    public function payload(): ModelSet
-    {
-        return $this->payload;
-    }
-
     public function definitionName(): string
     {
         return $this->definitionName;
     }
 
-    public function aggregateIdModel(): Model
+    public function payload(): EventPayload
     {
-        return $this->aggregateIdModel;
+        return $this->payload;
     }
 
-    public function commandName(): string
+    public function meta(): EventMeta
     {
-        return $this->commandName;
+        return $this->meta;
     }
 }
