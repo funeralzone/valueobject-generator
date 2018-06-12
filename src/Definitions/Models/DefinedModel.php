@@ -26,10 +26,7 @@ final class DefinedModel implements Model
         Location $instantiationLocation,
         string $definitionName,
         ModelType $type,
-        bool $nullable,
-        string $propertyName,
         bool $external,
-        bool $export,
         ModelSet $childModels,
         ModelProperties $properties,
         ModelDecorator $decorator = null
@@ -38,10 +35,7 @@ final class DefinedModel implements Model
         $this->instantiationLocation = $instantiationLocation;
         $this->definitionName = $definitionName;
         $this->type = $type;
-        $this->nullable = $nullable;
-        $this->propertyName = $propertyName;
         $this->external = $external;
-        $this->export = $export;
         $this->childModels = $childModels;
         $this->properties = $properties;
         $this->decorator = $decorator;
@@ -67,29 +61,9 @@ final class DefinedModel implements Model
         return $this->type;
     }
 
-    public function propertyName(): string
-    {
-        return $this->propertyName;
-    }
-
-    public function propertyNameUcFirst(): string
-    {
-        return ucfirst($this->propertyName);
-    }
-
-    public function nullable(): bool
-    {
-        return $this->nullable;
-    }
-
     public function external(): bool
     {
         return $this->external;
-    }
-
-    public function export(): bool
-    {
-        return $this->export;
     }
 
     public function children(): ModelSet

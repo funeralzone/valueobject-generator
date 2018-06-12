@@ -7,7 +7,7 @@ use Funeralzone\ValueObjectGenerator\Definitions\Events\Event;
 use Funeralzone\ValueObjectGenerator\Definitions\Events\EventSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Exceptions\InvalidDefinition;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\DefinedModel;
-use Funeralzone\ValueObjectGenerator\Definitions\Models\LinkedModel;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelProperties;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelSet;
@@ -22,7 +22,6 @@ use Symfony\Component\Yaml\Yaml;
 final class YamlDefinitionConverter implements DefinitionConverter
 {
     private $modelTypeRepository;
-    private $externalModelRepository;
     private $modelDecoratorRepository;
     private $validator;
     private $definitionErrorRenderer;
@@ -30,14 +29,12 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
     public function __construct(
         ModelTypeRepository $modelTypeRepository,
-        ExternalModelRepository $externalModelRepository,
         ModelDecoratorRepository $modelDecoratorRepository,
         DefinitionInputValidator $validator,
         DefinitionErrorRenderer $modelDefinitionErrorRenderer,
         array $rootNamespace
     ) {
         $this->modelTypeRepository = $modelTypeRepository;
-        $this->externalModelRepository = $externalModelRepository;
         $this->modelDecoratorRepository = $modelDecoratorRepository;
         $this->validator = $validator;
         $this->definitionErrorRenderer = $modelDefinitionErrorRenderer;
@@ -72,75 +69,26 @@ final class YamlDefinitionConverter implements DefinitionConverter
     {
         $models = [];
         if (array_key_exists('model', $parsedDefinitionInput)) {
-            $internallyExportedModels = [];
-            foreach ($parsedDefinitionInput['model'] as $modelName => $modelDefinitionInput) {
-                $internallyExportedModels = array_merge(
-                    $internallyExportedModels,
-                    $this->findInternallyExportedModelsFromModelElement([], $modelName, $modelDefinitionInput)
-                );
-            }
-            $internallyExportedModels = new ArrayExternalModelRepository($internallyExportedModels);
-
-            foreach ($parsedDefinitionInput['model'] as $modelName => $modelDefinitionInput) {
+            $existingModels = [];
+            foreach ($parsedDefinitionInput['model'] as $modelDefinitionInput) {
                 $models[] = $this->convertModelElement(
-                    $internallyExportedModels,
                     [],
-                    $modelName,
-                    $modelDefinitionInput
+                    $modelDefinitionInput,
+                    $existingModels
                 );
             }
         }
         return new ModelSet($models);
     }
 
-
-    private function findInternallyExportedModelsFromModelElement(
-        array $parentNamespace,
-        string $modelDefinitionName,
-        array $modelDefinition
-    ): array {
-        $internallyExportedModels = [];
-        if (is_array($modelDefinition)) {
-            $exported = $modelDefinition['export'] ?? false;
-            if ($exported) {
-                $internallyExportedModels[$modelDefinitionName] = $this->convertModelElement(
-                    new NullExternalModelRepository,
-                    $parentNamespace,
-                    $modelDefinitionName,
-                    $modelDefinition
-                );
-            }
-
-            if (array_key_exists('children', (array)$modelDefinition)) {
-                $currentPathElements = $parentNamespace;
-                $currentPathElements[] = $modelDefinitionName;
-
-                foreach ($modelDefinition['children'] as $childModelName => $childModel) {
-                    $internallyExportedModels = array_merge(
-                        $internallyExportedModels,
-                        $this->findInternallyExportedModelsFromModelElement(
-                            $currentPathElements,
-                            $childModelName,
-                            $childModel
-                        )
-                    );
-                }
-            }
-        }
-        return $internallyExportedModels;
-    }
-
     private function convertModelElement(
-        ExternalModelRepository $internallyExportedModels,
         array $parentNamespace,
-        string $modelDefinitionName,
-        array $modelDefinitionInput
+        array $modelDefinitionInput,
+        array &$existingModels,
+        ModelType $parentModelType = null
     ): Model {
-        $typeKey = $modelDefinitionInput['type'];
 
-        $referenceName = $modelDefinitionInput['referenceName'] ?? $modelDefinitionName;
-        $instantiationName = $modelDefinitionInput['instantiationName'] ?? $modelDefinitionName;
-        $propertyName = $modelDefinitionInput['propertyName'] ?? lcfirst($modelDefinitionName);
+        $modelDefinitionName = $modelDefinitionInput['name'];
 
         if (array_key_exists('namespace', $modelDefinitionInput)) {
             $rootNamespace = [];
@@ -152,38 +100,26 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $elementNamespace = explode('\\', trim($modelDefinitionInput['relativeNamespace'], '\\'));
             } else {
                 $elementNamespace = $parentNamespace;
-                $elementNamespace[] = $referenceName;
+                $elementNamespace[] = $modelDefinitionName;
             }
         }
 
-        $childModels = [];
-        if (array_key_exists('children', $modelDefinitionInput)) {
-            $childNamespace = $parentNamespace;
-            $childNamespace[] = $referenceName;
-            foreach ($modelDefinitionInput['children'] as $childModelName => $childModelDefinition) {
-                $childModels[] = $this->convertModelElement(
-                    $internallyExportedModels,
-                    $elementNamespace,
-                    $childModelName,
-                    $childModelDefinition
-                );
-            }
-        }
+        if (array_key_exists($modelDefinitionName, $existingModels)) {
+            /** @var Model $existingModel */
+            $existingModel = $existingModels[$modelDefinitionName];
 
-        if ($internallyExportedModels->has($typeKey)) {
-            return new LinkedModel(
-                $internallyExportedModels->get($typeKey),
+            return new ReferencedModel(
+                $existingModel,
                 $modelDefinitionName,
-                $propertyName
+                $this->distillModelPropertiesFromSchema($existingModel->type(), $modelDefinitionInput, $parentModelType)
             );
-        } elseif ($this->externalModelRepository->has($typeKey)) {
-            return new LinkedModel(
-                $this->externalModelRepository->get($typeKey),
-                $modelDefinitionName,
-                $propertyName
-            );
-        } elseif ($this->modelTypeRepository->has($typeKey)) {
-            $type = $this->modelTypeRepository->get((string)$typeKey);
+        } else {
+            $modelTypeKey = $modelDefinitionInput['type'];
+
+            $referenceName = $modelDefinitionInput['referenceName'] ?? $modelDefinitionName;
+            $instantiationName = $modelDefinitionInput['instantiationName'] ?? $modelDefinitionName;
+
+            $modelType = $this->modelTypeRepository->get((string)$modelTypeKey);
 
             $decoratorName = $modelDefinitionInput['decorator'] ?? null;
             if ($this->modelDecoratorRepository->has((string)$decoratorName)) {
@@ -192,7 +128,21 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $decorator = null;
             }
 
-            return new DefinedModel(
+            $childModels = [];
+            if (array_key_exists('children', $modelDefinitionInput)) {
+                $childNamespace = $parentNamespace;
+                $childNamespace[] = $referenceName;
+                foreach ($modelDefinitionInput['children'] as $childModelDefinition) {
+                    $childModels[] = $this->convertModelElement(
+                        $elementNamespace,
+                        $childModelDefinition,
+                        $existingModels,
+                        $modelType
+                    );
+                }
+            }
+
+            $model = new DefinedModel(
                 new Location(
                     $rootNamespace,
                     $elementNamespace,
@@ -204,29 +154,38 @@ final class YamlDefinitionConverter implements DefinitionConverter
                     $instantiationName
                 ),
                 $modelDefinitionName,
-                $type,
-                (bool)($modelDefinitionInput['nullable'] ?? false),
-                $propertyName,
+                $modelType,
                 (bool)($modelDefinitionInput['external'] ?? false),
-                (bool)($modelDefinitionInput['export'] ?? false),
                 new ModelSet($childModels),
-                $this->distillModelPropertiesFromSchema($type, $modelDefinitionInput),
+                $this->distillModelPropertiesFromSchema($modelType, $modelDefinitionInput, $parentModelType),
                 $decorator
             );
-        } else {
-            throw new InvalidDefinition();
+            $existingModels[$modelDefinitionName] = $model;
+
+            return $model;
         }
     }
 
-    private function distillModelPropertiesFromSchema(ModelType $modelType, array $modelDefinition): ModelProperties
-    {
-        $schemaValidationRules = $modelType->schemaValidationRules();
+    private function distillModelPropertiesFromSchema(
+        ModelType $modelType,
+        array $modelDefinition,
+        ModelType $parentModelType = null
+    ): ModelProperties {
+        $schemaValidationRules = $modelType->ownSchemaValidationRules();
+        if ($parentModelType) {
+            $schemaValidationRules = array_merge(
+                $schemaValidationRules,
+                $parentModelType->childSchemaValidationRules()
+            );
+        }
+
         $properties = [];
         foreach (array_keys($schemaValidationRules) as $key) {
             if (array_key_exists($key, $modelDefinition)) {
                 $properties[$key] = $modelDefinition[$key];
             }
         }
+
         return new ModelProperties($properties);
     }
 

@@ -17,7 +17,9 @@ interface ModelType
 
     public function allowChildModels(): bool;
 
-    public function schemaValidationRules(): array;
+    public function ownSchemaValidationRules(): array;
+
+    public function childSchemaValidationRules(): array;
 
     public function testStipulations(Model $model): ModelTestStipulations;
 

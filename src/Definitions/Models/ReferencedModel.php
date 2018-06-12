@@ -7,20 +7,24 @@ use Funeralzone\ValueObjectGenerator\Definitions\Location;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecorator;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 
-final class LinkedModel implements Model
+final class ReferencedModel implements Model
 {
     private $linkedModel;
     private $definitionName;
-    private $propertyName;
+    private $properties;
 
     public function __construct(
         Model $linkedModel,
         string $definitionName,
-        string $propertyName
+        ModelProperties $properties
     ) {
         $this->linkedModel = $linkedModel;
         $this->definitionName = $definitionName;
-        $this->propertyName = $propertyName;
+
+        $this->properties = new ModelProperties(array_merge(
+            $linkedModel->properties()->all(),
+            $properties->all()
+        ));
     }
 
     public function referenceLocation(): Location
@@ -43,26 +47,6 @@ final class LinkedModel implements Model
         return $this->linkedModel->type();
     }
 
-    public function propertyName(): string
-    {
-        return $this->propertyName;
-    }
-
-    public function propertyNameUcFirst(): string
-    {
-        return ucfirst($this->propertyName);
-    }
-
-    public function nullable(): bool
-    {
-        return $this->linkedModel->nullable();
-    }
-
-    public function export(): bool
-    {
-        return false;
-    }
-
     public function external(): bool
     {
         return $this->linkedModel->external();
@@ -80,7 +64,7 @@ final class LinkedModel implements Model
 
     public function properties(): ModelProperties
     {
-        return $this->linkedModel->properties();
+        return $this->properties;
     }
 
     public function decorator(): ?ModelDecorator

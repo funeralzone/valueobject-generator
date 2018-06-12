@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions;
 
 use Exception;
-use Funeralzone\ValueObjectGenerator\Repositories\ExternalModels\ExternalModelRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecoratorRepository;
+use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
 use Illuminate\Translation\ArrayLoader;
 use Illuminate\Translation\Translator;
@@ -13,15 +13,13 @@ use Illuminate\Validation\Validator;
 
 final class YamlDefinitionInputValidator implements DefinitionInputValidator
 {
-    private $externalModelRepository;
     private $modelTypeRepository;
     private $modelTypeDecoratorRepository;
     private $errors;
 
-    private $commonModelSchemaRules = [
+    private $definedModelSchemaRules = [
+        'name' => 'required|string',
         'type' => 'required|string',
-        'propertyName' => 'string',
-        'nullable' => 'boolean',
         'children' => 'array',
         'export' => 'boolean',
         'instantiationName' => 'string',
@@ -32,23 +30,19 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'external' => 'bool',
     ];
 
-    private $commonExternalModelSchemaRules = [
-        'type' => 'required|string',
-        'propertyName' => 'string',
+    private $referencedModelRules = [
+        'name' => 'required|string',
     ];
 
     private $eventSchemaRules = [
         'commandName' => 'required|string',
-        'aggregateIdModel' => 'required|string',
         'payload' => 'required|array',
     ];
 
     public function __construct(
         ModelTypeRepository $modelTypeRepository,
-        ExternalModelRepository $externalModelRepository,
         ModelDecoratorRepository $modelTypeDecoratorRepository
     ) {
-        $this->externalModelRepository = $externalModelRepository;
         $this->modelTypeRepository = $modelTypeRepository;
         $this->modelTypeDecoratorRepository = $modelTypeDecoratorRepository;
     }
@@ -72,19 +66,12 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     {
         $modelPaths = [];
         if (array_key_exists('model', $definitionInput) && is_array($definitionInput['model'])) {
-            $internallyExportedModels = [];
-            foreach ($definitionInput['model'] as $modelName => $modelDefinition) {
-                $internallyExportedModels = array_merge(
-                    $internallyExportedModels,
-                    $this->findInternallyExportedModelsFromModelElement([], $modelName, $modelDefinition)
-                );
-            }
-
-            foreach ($definitionInput['model'] as $modelName => $modelDefinition) {
-                $modelPaths = array_merge(
-                    $modelPaths,
-                    $this->validateModelElement($internallyExportedModels, [], $modelName, $modelDefinition)
-                );
+            $existingModelDefinitionNames = [];
+            foreach ($definitionInput['model'] as $modelDefinition) {
+                $existingModelDefinitionNames = array_unique(array_merge(
+                    $existingModelDefinitionNames,
+                    $this->validateModelElement($existingModelDefinitionNames, [], $modelDefinition)
+                ));
             }
         } else {
             $this->errors[] = '"model" has not been defined or is empty';
@@ -92,154 +79,121 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         return $modelPaths;
     }
 
-    private function findInternallyExportedModelsFromModelElement(
-        array $parentPathElements,
-        string $modelName,
-        array $modelDefinition,
-        string $pathOfExportedParent = null
-    ): array {
-        $internallyExportedModels = [];
-        if (is_array($modelDefinition)) {
-            $modelPath = ltrim(implode('\\', $parentPathElements) . '\\' . $modelName, '\\');
-
-            $exported = $modelDefinition['export'] ?? false;
-            if ($exported) {
-                if ($pathOfExportedParent === null) {
-                    $internallyExportedModels[$modelName] = $modelDefinition;
-                } else {
-                    $this->errors[] = sprintf(
-                        'Model "%s" - cannot be exported because a parent (%s) already has been',
-                        $modelPath,
-                        $pathOfExportedParent
-                    );
-                }
-            }
-
-            if (array_key_exists('children', (array)$modelDefinition)) {
-                $currentPathElements = $parentPathElements;
-                $currentPathElements[] = $modelName;
-
-                foreach ($modelDefinition['children'] as $childModelName => $childModel) {
-                    $internallyExportedModels = array_merge(
-                        $internallyExportedModels,
-                        $this->findInternallyExportedModelsFromModelElement(
-                            $currentPathElements,
-                            $childModelName,
-                            $childModel,
-                            $exported ? $modelPath : $pathOfExportedParent
-                        )
-                    );
-                }
-            }
-        }
-        return $internallyExportedModels;
-    }
-
     private function validateModelElement(
-        array $internallyExportedModels,
+        array $existingModelDefinitionNames,
         array $parentPathElements,
-        string $modelName,
-        $modelDefinition
+        array $modelDefinition,
+        ModelType $parentType = null
     ): array {
-        $modelPaths = [];
 
-        if (is_array($modelDefinition)) {
-            $modelPath = ltrim(implode('\\', $parentPathElements) . '\\' . $modelName, '\\');
-            $modelPaths[] = $modelPath;
+        if (array_key_exists('name', $modelDefinition)) {
+            $modelDefinitionName = $modelDefinition['name'];
+            $modelType = null;
 
-            $modelHasChildren = array_key_exists('children', (array)$modelDefinition);
+            if (is_array($modelDefinition)) {
+                $modelPath = ltrim(implode('\\', $parentPathElements) . '\\' . $modelDefinitionName, '\\');
+                $modelHasChildren = array_key_exists('children', (array)$modelDefinition);
 
-            if (array_key_exists('type', $modelDefinition)) {
-                $typeKey = $modelDefinition['type'];
-
-                if (array_key_exists($typeKey, $internallyExportedModels)) {
+                if (in_array($modelDefinitionName, $existingModelDefinitionNames)) {
                     if ($modelHasChildren) {
                         $this->errors[] = sprintf(
                             'Model "%s" - defines children but its cannot as it references another internal model',
-                            $modelPath,
-                            $typeKey
+                            $modelPath
                         );
                     }
 
-                    $this->validateModelSchema($modelPath, $this->commonExternalModelSchemaRules, $modelDefinition);
-                } elseif ($this->externalModelRepository->has($typeKey)) {
-                    if ($modelHasChildren) {
-                        $this->errors[] = sprintf(
-                            'Model "%s" - defines children but its cannot as it references another model',
-                            $modelPath,
-                            $typeKey
-                        );
+                    $rules = $this->referencedModelRules;
+                    if ($parentType) {
+                        $rules = array_merge($rules, $parentType->childSchemaValidationRules());
                     }
-
-                    $this->validateModelSchema($modelPath, $this->commonExternalModelSchemaRules, $modelDefinition);
-                } elseif ($this->modelTypeRepository->has($typeKey)) {
-                    $type = $this->modelTypeRepository->get($typeKey);
-                    if ($modelHasChildren && !$type->allowChildModels()) {
-                        $this->errors[] = sprintf(
-                            'Model "%s" - defines children but its type ("%s") does support them',
-                            $modelPath,
-                            $typeKey
-                        );
-                    }
-
-                    $rules = array_merge($this->commonModelSchemaRules, $type->schemaValidationRules());
                     $this->validateModelSchema($modelPath, $rules, $modelDefinition);
+                } else {
+                    if (array_key_exists('type', $modelDefinition)) {
+                        $typeKey = $modelDefinition['type'];
 
-                    $decorator = $modelDefinition['decorator'] ?? null;
-                    if ($decorator) {
-                        if (!$this->modelTypeDecoratorRepository->has((string)$decorator)) {
+                        if ($this->modelTypeRepository->has($typeKey)) {
+                            $modelType = $this->modelTypeRepository->get($typeKey);
+                            if ($modelHasChildren && !$modelType->allowChildModels()) {
+                                $this->errors[] = sprintf(
+                                    'Model "%s" - defines children but its type ("%s") does support them',
+                                    $modelPath,
+                                    $typeKey
+                                );
+                            }
+
+                            $rules = array_merge(
+                                $this->definedModelSchemaRules,
+                                $modelType->ownSchemaValidationRules()
+                            );
+                            if ($parentType) {
+                                $rules = array_merge($rules, $parentType->childSchemaValidationRules());
+                            }
+                            $this->validateModelSchema($modelPath, $rules, $modelDefinition);
+
+                            $decorator = $modelDefinition['decorator'] ?? null;
+                            if ($decorator) {
+                                if (!$this->modelTypeDecoratorRepository->has((string)$decorator)) {
+                                    $this->errors[] = sprintf(
+                                        'Model "%s" - defines a decorator ("%s") but it doesn\'t exist',
+                                        $modelPath,
+                                        $decorator
+                                    );
+                                }
+                            }
+
+                            $existingModelDefinitionNames[] = $modelDefinitionName;
+                        } else {
                             $this->errors[] = sprintf(
-                                'Model "%s" - defines a decorator ("%s") but it doesn\'t exist',
+                                'Model "%s" - defines an unsupported type - "%s"',
                                 $modelPath,
-                                $decorator
+                                $typeKey
                             );
                         }
+                    } else {
+                        $this->errors[] = sprintf(
+                            'Model "%s" - must define a "type"',
+                            $modelPath
+                        );
                     }
-                } else {
-                    $this->errors[] = sprintf(
-                        'Model "%s" - defines an unsupported type - "%s"',
-                        $modelPath,
-                        $typeKey
-                    );
+                }
+
+                if ($modelHasChildren) {
+                    $properties = $modelDefinition['children'];
+                    if (is_array($properties)) {
+                        $currentPathElements = $parentPathElements;
+                        $currentPathElements[] = $modelDefinitionName;
+                        foreach ($properties as $childModel) {
+                            $existingModelDefinitionNames = array_unique(array_merge(
+                                $existingModelDefinitionNames,
+                                $this->validateModelElement(
+                                    $existingModelDefinitionNames,
+                                    $currentPathElements,
+                                    $childModel,
+                                    $modelType
+                                )
+                            ));
+                        }
+                    } else {
+                        $this->errors[] = sprintf(
+                            'Model "%s" - has defined "properties" but it is not an array',
+                            $modelPath
+                        );
+                    }
                 }
             } else {
                 $this->errors[] = sprintf(
-                    'Model "%s" - must define either a "type"',
-                    $modelPath
+                    'Model "%s" - not defined as an array',
+                    implode('\\', $parentPathElements)
                 );
-            }
-
-            if ($modelHasChildren) {
-                $properties = $modelDefinition['children'];
-                if (is_array($properties)) {
-                    $currentPathElements = $parentPathElements;
-                    $currentPathElements[] = $modelName;
-                    foreach ($properties as $childModelName => $childModel) {
-                        $modelPaths = array_merge(
-                            $modelPaths,
-                            $this->validateModelElement(
-                                $internallyExportedModels,
-                                $currentPathElements,
-                                $childModelName,
-                                $childModel
-                            )
-                        );
-                    }
-                } else {
-                    $this->errors[] = sprintf(
-                        'Model "%s" - has defined "properties" but it is not an array',
-                        $modelPath
-                    );
-                }
             }
         } else {
             $this->errors[] = sprintf(
-                'Model "%s" - not defined as an array',
+                'All items must define a "name"',
                 implode('\\', $parentPathElements)
             );
         }
 
-        return $modelPaths;
+        return $existingModelDefinitionNames;
     }
 
     private function validateModelSchema(
