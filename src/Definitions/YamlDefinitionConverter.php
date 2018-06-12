@@ -144,11 +144,16 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
         if (array_key_exists('namespace', $modelDefinitionInput)) {
             $rootNamespace = [];
-            $elementNamespace = explode('\\', $modelDefinitionInput['namespace']);
+            $elementNamespace = explode('\\', trim($modelDefinitionInput['namespace'], '\\'));
         } else {
             $rootNamespace = $this->rootNamespace;
-            $elementNamespace = $parentNamespace;
-            $elementNamespace[] = $referenceName;
+
+            if (array_key_exists('relativeNamespace', $modelDefinitionInput)) {
+                $elementNamespace = explode('\\', trim($modelDefinitionInput['relativeNamespace'], '\\'));
+            } else {
+                $elementNamespace = $parentNamespace;
+                $elementNamespace[] = $referenceName;
+            }
         }
 
         $childModels = [];

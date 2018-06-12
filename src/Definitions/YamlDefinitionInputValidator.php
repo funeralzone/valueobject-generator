@@ -27,6 +27,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'instantiationName' => 'string',
         'referenceName' => 'string',
         'namespace' => 'string',
+        'relativeNamespace' => 'string',
         'decorator' => 'string',
         'external' => 'bool',
     ];
