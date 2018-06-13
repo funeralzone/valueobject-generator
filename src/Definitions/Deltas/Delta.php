@@ -1,32 +1,31 @@
 <?php
 declare(strict_types=1);
 
-namespace Funeralzone\ValueObjectGenerator\Definitions\Events;
+namespace Funeralzone\ValueObjectGenerator\Definitions\Deltas;
 
-use Funeralzone\ValueObjectGenerator\Definitions\Deltas\DeltaPayload;
 use Funeralzone\ValueObjectGenerator\Definitions\Location;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelPayload;
 
-final class Event
+final class Delta
 {
     private $location;
     private $definitionName;
     private $payload;
-    private $deltas;
-    private $meta;
+    private $subDeltas;
+    private $createable;
 
     public function __construct(
-        Location $location,
+        Location $deltaLocation,
         string $definitionName,
         ModelPayload $payload,
-        DeltaPayload $deltas,
-        EventMeta $meta
+        DeltaPayload $subDeltas,
+        bool $createable
     ) {
-        $this->location = $location;
+        $this->location = $deltaLocation;
         $this->definitionName = $definitionName;
         $this->payload = $payload;
-        $this->deltas = $deltas;
-        $this->meta = $meta;
+        $this->subDeltas = $subDeltas;
+        $this->createable = $createable;
     }
 
     public function location(): Location
@@ -44,13 +43,13 @@ final class Event
         return $this->payload;
     }
 
-    public function deltas(): DeltaPayload
+    public function subDeltas(): DeltaPayload
     {
-        return $this->deltas;
+        return $this->subDeltas;
     }
 
-    public function meta(): EventMeta
+    public function createable(): bool
     {
-        return $this->meta;
+        return $this->createable;
     }
 }

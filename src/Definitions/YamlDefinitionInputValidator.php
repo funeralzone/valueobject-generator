@@ -27,17 +27,53 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'namespace' => 'string',
         'relativeNamespace' => 'string',
         'decorator' => 'string',
-        'external' => 'bool',
     ];
 
-    private $referencedModelRules = [
+    private $referencedModelSchemaRules = [
         'name' => 'required|string',
+    ];
+
+    private $deltaSchemaRules = [
+        'name' => 'required|string',
+        'location' => 'string',
+
+        'payload' => 'array',
+        'payload.*.name' => 'required|string',
+        'payload.*.propertyName' => 'required|string',
+
+        'deltas' => 'array',
+        'deltas.*.name' => 'required|string',
+        'deltas.*.propertyName' => 'required|string',
+    ];
+
+    private $commandSchemaRules = [
+        'name' => 'required|string',
+
+        'payload' => 'required|array',
+        'payload.*.name' => 'required|string',
+        'payload.*.propertyName' => 'required|string',
+
+        'deltas' => 'array',
+        'deltas.*.name' => 'required|string',
+        'deltas.*.propertyName' => 'required|string',
+    ];
+
+    private $querySchemaRules = [
+        'name' => 'required|string',
+
+        'payload' => 'required|array',
+        'payload.*.name' => 'required|string',
+        'payload.*.propertyName' => 'required|string',
+
+        'deltas' => 'array',
+        'deltas.*.name' => 'required|string',
+        'deltas.*.propertyName' => 'required|string',
     ];
 
     private $eventSchemaRules = [
         'name' => 'required|string',
 
-        'payload' => 'required|array',
+        'payload' => 'array',
         'payload.*.name' => 'required|string',
         'payload.*.propertyName' => 'required|string',
 
@@ -45,6 +81,10 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'meta.*.name' => 'required|string',
         'meta.*.propertyName' => 'required|string',
         'meta.*.key' => 'required|string',
+
+        'deltas' => 'array',
+        'deltas.*.name' => 'required|string',
+        'deltas.*.propertyName' => 'required|string',
     ];
 
     public function __construct(
@@ -60,7 +100,11 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         $this->errors = [];
 
         $modelNames = $this->validateModel($rawDefinition);
-        $this->validateEvents($modelNames, $rawDefinition);
+        $deltaNames = $this->validateDeltas($modelNames, $rawDefinition);
+
+        $this->validateCommands($modelNames, $deltaNames, $rawDefinition);
+        $this->validateQueries($modelNames, $deltaNames, $rawDefinition);
+        $this->validateEvents($modelNames, $deltaNames, $rawDefinition);
 
         return count($this->errors) == 0;
     }
@@ -109,15 +153,15 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                         );
                     }
 
-                    $rules = $this->referencedModelRules;
+                    $rules = $this->referencedModelSchemaRules;
                     if ($parentType) {
                         $rules = array_merge($rules, $parentType->childSchemaValidationRules());
                     }
-                    $this->validateModelSchema($modelPath, $rules, $modelDefinition);
+                    $this->validateSchema('Model', $modelPath, $rules, $modelDefinition);
                 } else {
-                    $external = (bool) ($modelDefinition['external'] ?? false);
+                    $external = array_key_exists('namespace', $modelDefinition);
 
-                    if (! $external) {
+                    if (!$external) {
                         if (array_key_exists('type', $modelDefinition)) {
                             $typeKey = $modelDefinition['type'];
 
@@ -138,8 +182,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                                 if ($parentType) {
                                     $rules = array_merge($rules, $parentType->childSchemaValidationRules());
                                 }
-                                $this->validateModelSchema($modelPath, $rules, $modelDefinition);
-
+                                $this->validateSchema('Model', $modelPath, $rules, $modelDefinition);
                             } else {
                                 $this->errors[] = sprintf(
                                     'Model "%s" - defines an unsupported type - "%s"',
@@ -208,68 +251,211 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         return $existingModelDefinitionNames;
     }
 
-    private function validateModelSchema(
-        string $modelPath,
-        array $rules,
-        array $modelDefinition
-    ): void {
-        foreach (array_keys($modelDefinition) as $key) {
-            if (!array_key_exists($key, $rules)) {
+    private function validateDeltas(array $modelNames, array $definitionInput): array
+    {
+        $existingDeltaDefinitionNames = [];
+        if (array_key_exists('deltas', $definitionInput) && is_array($definitionInput['deltas'])) {
+            foreach ($definitionInput['deltas'] as $deltaDefinition) {
+                $existingDeltaDefinitionNames = array_unique(array_merge(
+                    $existingDeltaDefinitionNames,
+                    $this->validateDeltaElement($modelNames, $existingDeltaDefinitionNames, $deltaDefinition)
+                ));
+            }
+        }
+        return $existingDeltaDefinitionNames;
+    }
+
+    private function validateDeltaElement(array $modelNames, array $existingDeltaNames, array $deltaDefinition): array
+    {
+        $deltaName = $deltaDefinition['name'] ?? 'N\A';
+
+        if ($this->validateSchema('Delta', $deltaName, $this->deltaSchemaRules, $deltaDefinition)) {
+            if (!in_array($deltaName, $existingDeltaNames)) {
+                $existingDeltaNames[] = $deltaName;
+                $location = $deltaDefinition['location'] ?? null;
+
+                $payloadExists = array_key_exists('payload', $deltaDefinition);
+                if ($location) {
+                    if ($payloadExists) {
+                        $this->errors[] = sprintf(
+                            'Delta "%s" - "location" and "payload" cannot both be defined',
+                            $deltaName
+                        );
+                    }
+                } else {
+                    if ($payloadExists) {
+                        foreach ($deltaDefinition['payload'] as $payloadItem) {
+                            $payloadItemName = $payloadItem['name'];
+                            if (!in_array($payloadItemName, $modelNames)) {
+                                $this->errors[] = sprintf(
+                                    'Delta "%s" - "%s" is not a valid model',
+                                    $deltaName,
+                                    $payloadItemName
+                                );
+                            }
+                        }
+                    } else {
+                        $this->errors[] = sprintf(
+                            'Delta "%s" - no "payload" has been defined',
+                            $deltaName
+                        );
+                    }
+                }
+
+                if (array_key_exists('deltas', $deltaDefinition)) {
+                    foreach ($deltaDefinition['deltas'] as $deltaItem) {
+                        $subDeltaName = $deltaItem['name'];
+                        if (!in_array($subDeltaName, $existingDeltaNames)) {
+                            $this->errors[] = sprintf(
+                                'Delta "%s" - "%s" is not a valid delta',
+                                $deltaName,
+                                $subDeltaName
+                            );
+                        }
+                    }
+                }
+            } else {
                 $this->errors[] = sprintf(
-                    'Model "%s" - "%s" is an invalid property or is not allowed in this context',
-                    $modelPath,
-                    $key
+                    'Delta "%s" - cannot be redefined',
+                    $deltaName
                 );
             }
         }
 
-        $validator = new Validator(
-            new Translator(new ArrayLoader(), 'EN'),
-            $modelDefinition,
-            $rules
-        );
+        return $existingDeltaNames;
+    }
 
-        try {
-            $validator->validate();
-        } catch (Exception $e) {
-            $errorDetails = $validator->errors();
-            foreach ($errorDetails->getMessages() as $propertyName => $rules) {
-                $this->errors[] = sprintf(
-                    'Model "%s" - "%s" is invalid. Failed on: "%s"',
-                    $modelPath,
-                    $propertyName,
-                    str_replace('validation.', '', implode(', ', $rules))
-                );
+    private function validateCommands(array $modelNames, array $deltaNames, array $definitionInput): void
+    {
+        if (array_key_exists('commands', $definitionInput) && is_array($definitionInput['commands'])) {
+            foreach ($definitionInput['commands'] as $commandDefinition) {
+                $this->validateCommandElement($modelNames, $deltaNames, $commandDefinition);
             }
         }
     }
 
-    private function validateEvents(array $modelNames, array $definitionInput): void
+    private function validateCommandElement(array $modelNames, array $deltaNames, array $commandDefinition): void
     {
-        if (array_key_exists('events', $definitionInput) && is_array($definitionInput['events'])) {
-            foreach ($definitionInput['events'] as $eventDefinition) {
-                $this->validateEventElement($modelNames, $eventDefinition);
+        $commandName = $commandDefinition['name'] ?? 'N\A';
+
+        if ($this->validateSchema('Command', $commandName, $this->commandSchemaRules, $commandDefinition)) {
+            foreach ($commandDefinition['payload'] as $payloadItem) {
+                $commandName = $payloadItem['name'];
+                if (!in_array($commandName, $modelNames)) {
+                    $this->errors[] = sprintf(
+                        'Command "%s" - "%s" is not a valid model',
+                        $commandName,
+                        $commandName
+                    );
+                }
+            }
+
+            if (array_key_exists('deltas', $commandDefinition)) {
+                foreach ($commandDefinition['deltas'] as $deltaItem) {
+                    $subDeltaName = $deltaItem['name'];
+                    if (!in_array($subDeltaName, $deltaNames)) {
+                        $this->errors[] = sprintf(
+                            'Command "%s" - "%s" is not a valid delta',
+                            $commandName,
+                            $subDeltaName
+                        );
+                    }
+                }
+            }
+        } else {
+            $this->errors[] = sprintf(
+                'Delta "%s" - cannot be redefined',
+                $commandName
+            );
+        }
+    }
+
+    private function validateQueries(array $modelNames, array $deltaNames, array $definitionInput): void
+    {
+        if (array_key_exists('queries', $definitionInput) && is_array($definitionInput['queries'])) {
+            foreach ($definitionInput['queries'] as $commandDefinition) {
+                $this->validateQueryElement($modelNames, $deltaNames, $commandDefinition);
             }
         }
     }
 
-    private function validateEventElement(array $modelNames, array $eventDefinition): void
+    private function validateQueryElement(array $modelNames, array $deltaNames, array $queryDefinition): void
     {
-        $eventName = $eventDefinition['name'] ?? 'N\A';
+        $queryName = $queryDefinition['name'] ?? 'N\A';
 
-        if ($this->validateEventSchema($eventName, $this->eventSchemaRules, $eventDefinition)) {
-            foreach ($eventDefinition['payload'] as $payloadItem) {
+        if ($this->validateSchema('Query', $queryName, $this->querySchemaRules, $queryDefinition)) {
+            foreach ($queryDefinition['payload'] as $payloadItem) {
                 $modelName = $payloadItem['name'];
                 if (!in_array($modelName, $modelNames)) {
                     $this->errors[] = sprintf(
-                        'Event "%s" - "%s" is not a valid model',
-                        $eventName,
+                        'Query "%s" - "%s" is not a valid model',
+                        $queryName,
                         $modelName
                     );
                 }
             }
 
-            if (array_key_exists('meta', $payloadItem)) {
+            if (array_key_exists('deltas', $queryDefinition)) {
+                foreach ($queryDefinition['deltas'] as $deltaItem) {
+                    $deltaName = $deltaItem['name'];
+                    if (!in_array($deltaName, $deltaNames)) {
+                        $this->errors[] = sprintf(
+                            'Query "%s" - "%s" is not a valid delta',
+                            $queryName,
+                            $deltaName
+                        );
+                    }
+                }
+            }
+        } else {
+            $this->errors[] = sprintf(
+                'Query "%s" - cannot be redefined',
+                $queryName
+            );
+        }
+    }
+
+    private function validateEvents(array $modelNames, array $deltaNames, array $definitionInput): void
+    {
+        if (array_key_exists('events', $definitionInput) && is_array($definitionInput['events'])) {
+            foreach ($definitionInput['events'] as $eventDefinition) {
+                $this->validateEventElement($modelNames, $deltaNames, $eventDefinition);
+            }
+        }
+    }
+
+    private function validateEventElement(array $modelNames, array $deltaNames, array $eventDefinition): void
+    {
+        $eventName = $eventDefinition['name'] ?? 'N\A';
+
+        if ($this->validateSchema('Event', $eventName, $this->eventSchemaRules, $eventDefinition)) {
+            if (array_key_exists('payload', $eventDefinition)) {
+                foreach ($eventDefinition['payload'] as $payloadItem) {
+                    $modelName = $payloadItem['name'];
+                    if (!in_array($modelName, $modelNames)) {
+                        $this->errors[] = sprintf(
+                            'Event "%s" - "%s" is not a valid model',
+                            $eventName,
+                            $modelName
+                        );
+                    }
+                }
+            }
+
+            if (array_key_exists('deltas', $eventDefinition)) {
+                foreach ($eventDefinition['deltas'] as $deltaItem) {
+                    $deltaName = $deltaItem['name'];
+                    if (!in_array($deltaName, $deltaNames)) {
+                        $this->errors[] = sprintf(
+                            'Event "%s" - "%s" is not a valid delta',
+                            $deltaName,
+                            $deltaName
+                        );
+                    }
+                }
+            }
+
+            if (array_key_exists('meta', $eventDefinition)) {
                 foreach ($eventDefinition['meta'] as $metaItem) {
                     $modelName = $metaItem['name'];
                     if (!in_array($modelName, $modelNames)) {
@@ -284,17 +470,18 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         }
     }
 
-    private function validateEventSchema(string $eventName, array $rules, array $modelDefinition): bool
+    private function validateSchema(string $schemaType, string $name, array $rules, array $definition): bool
     {
         $valid = true;
 
-        foreach (array_keys($modelDefinition) as $key) {
+        foreach (array_keys($definition) as $key) {
             if (!array_key_exists($key, $rules)) {
                 $valid = false;
 
                 $this->errors[] = sprintf(
-                    'Event "%s" - "%s" is an invalid property',
-                    $eventName,
+                    '%s "%s" - "%s" is an invalid property',
+                    $schemaType,
+                    $name,
                     $key
                 );
             }
@@ -302,7 +489,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
 
         $validator = new Validator(
             new Translator(new ArrayLoader(), 'EN'),
-            $modelDefinition,
+            $definition,
             $rules
         );
 
@@ -314,8 +501,9 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
             $errorDetails = $validator->errors();
             foreach ($errorDetails->getMessages() as $propertyName => $rules) {
                 $this->errors[] = sprintf(
-                    'Event "%s" - "%s" is invalid. Failed on: "%s"',
-                    $eventName,
+                    '%s "%s" - "%s" is invalid. Failed on: "%s"',
+                    $schemaType,
+                    $name,
                     $propertyName,
                     str_replace('validation.', '', implode(', ', $rules))
                 );

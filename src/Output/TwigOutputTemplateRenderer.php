@@ -3,11 +3,15 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Output;
 
+use Funeralzone\ValueObjectGenerator\Conventions\ModelNamer;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\Templates\TemplateRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\Templates\TemplateRepositoryGroup;
 use Twig_Environment;
+use Twig_Filter;
+use Twig_Function;
 
 final class TwigOutputTemplateRenderer implements OutputTemplateRenderer
 {
@@ -38,8 +42,31 @@ final class TwigOutputTemplateRenderer implements OutputTemplateRenderer
                 $loader,
                 []
             );
+
+            $this->extendTwig($this->twigEnvironment);
         }
         return $this->twigEnvironment;
+    }
+
+    private function extendTwig(Twig_Environment $environment): void
+    {
+        $environment->addFilter(new Twig_Filter('ucFirst', function($input){
+            if (is_string($input)) {
+                return ucfirst($input);
+            } else {
+                return $input;
+            }
+        }));
+
+        $environment->addFunction(new Twig_Function('makeNonNullModelName', function($input){
+            $modelNamer = new ModelNamer();
+            if ($input instanceof Model) {
+                /** @var Model $input */
+                return $modelNamer->makeNonNullClassName($input->definitionName());
+            } else {
+                return $input;
+            }
+        }));
     }
 
     private function buildTemplateRepository(): TemplateRepository

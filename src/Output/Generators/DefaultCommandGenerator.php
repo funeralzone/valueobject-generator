@@ -4,14 +4,13 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Output\Generators;
 
 use Funeralzone\ValueObjectGenerator\Conventions\ModelNamer;
+use Funeralzone\ValueObjectGenerator\Definitions\Commands\Command;
 use Funeralzone\ValueObjectGenerator\Definitions\Deltas\DeltaPayloadItem;
-use Funeralzone\ValueObjectGenerator\Definitions\Events\Event;
-use Funeralzone\ValueObjectGenerator\Definitions\Events\EventMetaItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelPayloadItem;
 use Funeralzone\ValueObjectGenerator\Output\OutputTemplateRenderer;
 use Funeralzone\ValueObjectGenerator\Output\OutputWriterFactory;
 
-class DefaultEventGenerator implements EventGenerator
+class DefaultCommandGenerator implements CommandGenerator
 {
     private $writerFactory;
     private $outputTemplateRenderer;
@@ -27,13 +26,13 @@ class DefaultEventGenerator implements EventGenerator
         $this->templateName = $templateName;
     }
 
-    public function generate(Event $event)
+    public function generate(Command $command): void
     {
-        $outputWriter = $this->writerFactory->makeWriter($event->location());
+        $outputWriter = $this->writerFactory->makeWriter($command->location());
 
         $modelNamer = new ModelNamer;
         $useStatements = [];
-        foreach ($event->payload()->all() as $payloadItem) {
+        foreach ($command->payload()->all() as $payloadItem) {
             /** @var ModelPayloadItem $payloadItem */
             $model = $payloadItem->model();
             $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
@@ -42,25 +41,16 @@ class DefaultEventGenerator implements EventGenerator
             $useStatements[] = $model->referenceLocation()->path();
         }
 
-        foreach ($event->deltas()->all() as $deltaPayloadItem) {
+        foreach ($command->deltas()->all() as $deltaPayloadItem) {
             /** @var DeltaPayloadItem $deltaPayloadItem */
             $useStatements[] = $deltaPayloadItem->delta()->location()->path();
         }
 
-        foreach ($event->meta()->all() as $metaItem) {
-            /** @var EventMetaItem $metaItem */
-            $model = $metaItem->model();
-            $useStatements[] = $model->instantiationLocation()->path();
-            if (!$model->referenceLocation()->isSame($model->instantiationLocation())) {
-                $useStatements[] = $model->referenceLocation()->path();
-            }
-        }
-
         $source = $this->outputTemplateRenderer->render($this->templateName, [
-            'event' => $event,
+            'command' => $command,
             'useStatements' => array_unique($useStatements),
         ]);
 
-        $outputWriter->write($event->definitionName() . '.php', $source);
+        $outputWriter->write($command->definitionName() . '.php', $source);
     }
 }

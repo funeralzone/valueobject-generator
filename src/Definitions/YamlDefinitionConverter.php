@@ -3,18 +3,27 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Definitions;
 
+use Funeralzone\ValueObjectGenerator\Conventions\ModelNamer;
+use Funeralzone\ValueObjectGenerator\Definitions\Commands\Command;
+use Funeralzone\ValueObjectGenerator\Definitions\Commands\CommandSet;
+use Funeralzone\ValueObjectGenerator\Definitions\Deltas\Delta;
+use Funeralzone\ValueObjectGenerator\Definitions\Deltas\DeltaPayload;
+use Funeralzone\ValueObjectGenerator\Definitions\Deltas\DeltaPayloadItem;
+use Funeralzone\ValueObjectGenerator\Definitions\Deltas\DeltaSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Events\Event;
 use Funeralzone\ValueObjectGenerator\Definitions\Events\EventMeta;
 use Funeralzone\ValueObjectGenerator\Definitions\Events\EventMetaItem;
-use Funeralzone\ValueObjectGenerator\Definitions\Events\EventPayload;
-use Funeralzone\ValueObjectGenerator\Definitions\Events\EventPayloadItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Events\EventSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Exceptions\InvalidDefinition;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\DefinedModel;
-use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelPayload;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelPayloadItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelProperties;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelSet;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
+use Funeralzone\ValueObjectGenerator\Definitions\Queries\Query;
+use Funeralzone\ValueObjectGenerator\Definitions\Queries\QuerySet;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecoratorRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
@@ -50,11 +59,17 @@ final class YamlDefinitionConverter implements DefinitionConverter
         $this->validateInput($parsedDefinitionInput);
 
         $models = $this->convertModel($parsedDefinitionInput);
-        $events = $this->convertEvents($models, $parsedDefinitionInput);
+        $deltas = $this->convertDeltas($models, $parsedDefinitionInput);
+        $commands = $this->convertCommands($models, $deltas, $parsedDefinitionInput);
+        $queries = $this->convertQueries($models, $deltas, $parsedDefinitionInput);
+        $events = $this->convertEvents($models, $deltas, $parsedDefinitionInput);
 
         return new Definition(
             $models,
-            $events
+            $deltas,
+            $events,
+            $commands,
+            $queries
         );
     }
 
@@ -93,9 +108,12 @@ final class YamlDefinitionConverter implements DefinitionConverter
         $modelDefinitionName = $modelDefinitionInput['name'];
 
         if (array_key_exists('namespace', $modelDefinitionInput)) {
+            $external = true;
+
             $rootNamespace = [];
             $elementNamespace = explode('\\', trim($modelDefinitionInput['namespace'], '\\'));
         } else {
+            $external = false;
             $rootNamespace = $this->rootNamespace;
 
             if (array_key_exists('relativeNamespace', $modelDefinitionInput)) {
@@ -116,9 +134,14 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $this->distillModelPropertiesFromSchema($existingModel->type(), $modelDefinitionInput, $parentModelType)
             );
         } else {
-            $external = (bool)($modelDefinitionInput['external'] ?? false);
-            $referenceName = $modelDefinitionInput['referenceName'] ?? $modelDefinitionName;
             $instantiationName = $modelDefinitionInput['instantiationName'] ?? $modelDefinitionName;
+
+            if (array_key_exists('referenceName', $modelDefinitionInput)) {
+                $referenceName = $modelDefinitionInput['referenceName'];
+            } else {
+                $modelNamer = new ModelNamer;
+                $referenceName = $modelNamer->makeNullableImplementationInterfaceName($modelDefinitionName);
+            }
 
             if ($external) {
                 $modelType = new NullModelType;
@@ -195,13 +218,216 @@ final class YamlDefinitionConverter implements DefinitionConverter
         return new ModelProperties($properties);
     }
 
-    private function convertEvents(ModelSet $models, array $parsedDefinitionInput): EventSet
+    private function convertDeltas(ModelSet $models, array $parsedDefinitionInput): DeltaSet
+    {
+        $deltas = [];
+        if (array_key_exists('deltas', $parsedDefinitionInput)) {
+            $existingDeltas = [];
+            foreach ($parsedDefinitionInput['deltas'] as $deltaDefinitionInput) {
+                $deltas[] = $this->convertDeltaElement(
+                    $models,
+                    $deltaDefinitionInput,
+                    $existingDeltas
+                );
+            }
+        }
+        return new DeltaSet($deltas);
+    }
+
+    private function convertDeltaElement(
+        ModelSet $models,
+        array $deltaDefinitionInput,
+        array &$existingDeltas
+    ): Delta {
+
+        $deltaDefinitionName = $deltaDefinitionInput['name'];
+        $location = $deltaDefinitionInput['location'] ?? null;
+
+        $payloadModels = [];
+        if (! $location && array_key_exists('payload', $deltaDefinitionInput)) {
+            foreach ($deltaDefinitionInput['payload'] as $payloadModelDefinition) {
+                $modelName = $payloadModelDefinition['name'];
+                $model = $models->getByname($modelName);
+
+                $payloadModels[] = new ModelPayloadItem(
+                    $model,
+                    $payloadModelDefinition['propertyName']
+                );
+            }
+        }
+
+        $subDeltaPayloadItems = [];
+        if (array_key_exists('deltas', $deltaDefinitionInput)) {
+            foreach ($deltaDefinitionInput['deltas'] as $subDeltaDefinition) {
+                $subDeltaPayloadItems[] = new DeltaPayloadItem(
+                    $existingDeltas[$subDeltaDefinition['name']],
+                    $subDeltaDefinition['propertyName']
+                );
+            }
+        }
+
+        if ($location) {
+            $locationElements = explode('\\', $location);
+            $locationName = array_pop($locationElements);
+
+            $deltaLocation = new Location(
+                $locationElements,
+                [],
+                $locationName
+            );
+        } else {
+            $deltaLocation = new Location(
+                $this->rootNamespace,
+                ['Deltas'],
+                $deltaDefinitionName
+            );
+        }
+
+        $delta = new Delta(
+            $deltaLocation,
+            $deltaDefinitionName,
+            new ModelPayload($payloadModels),
+            new DeltaPayload($subDeltaPayloadItems),
+            $location == null
+        );
+
+        $existingDeltas[$deltaDefinitionName] = $delta;
+
+        return $delta;
+    }
+
+    private function convertCommands(ModelSet $models, DeltaSet $deltas, array $parsedDefinitionInput): CommandSet
+    {
+        $commands = [];
+        if (array_key_exists('commands', $parsedDefinitionInput)) {
+            foreach ($parsedDefinitionInput['commands'] as $commandDefinitionInput) {
+                $commands[] = $this->convertCommandElement(
+                    $models,
+                    $deltas,
+                    $commandDefinitionInput
+                );
+            }
+        }
+        return new CommandSet($commands);
+    }
+
+    private function convertCommandElement(
+        ModelSet $models,
+        DeltaSet $deltas,
+        array $commandDefinitionInput
+    ): Command {
+
+        $commandDefinitionName = $commandDefinitionInput['name'];
+
+        $payloadModels = [];
+        if (array_key_exists('payload', $commandDefinitionInput)) {
+            foreach ($commandDefinitionInput['payload'] as $payloadModelDefinition) {
+                $modelName = $payloadModelDefinition['name'];
+                $model = $models->getByname($modelName);
+
+                $payloadModels[] = new ModelPayloadItem(
+                    $model,
+                    $payloadModelDefinition['propertyName']
+                );
+            }
+        }
+
+        $deltaPayloadItems = [];
+        if (array_key_exists('deltas', $commandDefinitionInput)) {
+            foreach ($commandDefinitionInput['deltas'] as $subDeltaDefinition) {
+                $deltaPayloadItems[] = new DeltaPayloadItem(
+                    $deltas->getByname($subDeltaDefinition['name']),
+                    $subDeltaDefinition['propertyName']
+                );
+            }
+        }
+
+        $delta = new Command(
+            new Location(
+                $this->rootNamespace,
+                ['Commands'],
+                $commandDefinitionName
+            ),
+            $commandDefinitionName,
+            new ModelPayload($payloadModels),
+            new DeltaPayload($deltaPayloadItems)
+        );
+
+        $existingDeltas[$commandDefinitionName] = $delta;
+
+        return $delta;
+    }
+
+    private function convertQueries(ModelSet $models, DeltaSet $deltas, array $parsedDefinitionInput): QuerySet
+    {
+        $queries = [];
+        if (array_key_exists('queries', $parsedDefinitionInput)) {
+            foreach ($parsedDefinitionInput['queries'] as $queryDefinitionInput) {
+                $queries[] = $this->convertQueryElement(
+                    $models,
+                    $deltas,
+                    $queryDefinitionInput
+                );
+            }
+        }
+        return new QuerySet($queries);
+    }
+
+    private function convertQueryElement(
+        ModelSet $models,
+        DeltaSet $deltas,
+        array $queryDefinitionInput
+    ): Query {
+
+        $queryDefinitionName = $queryDefinitionInput['name'];
+
+        $payloadModels = [];
+        if (array_key_exists('payload', $queryDefinitionInput)) {
+            foreach ($queryDefinitionInput['payload'] as $payloadModelDefinition) {
+                $modelName = $payloadModelDefinition['name'];
+                $model = $models->getByname($modelName);
+
+                $payloadModels[] = new ModelPayloadItem(
+                    $model,
+                    $payloadModelDefinition['propertyName']
+                );
+            }
+        }
+
+        $deltaPayloadItems = [];
+        if (array_key_exists('deltas', $queryDefinitionInput)) {
+            foreach ($queryDefinitionInput['deltas'] as $subDeltaDefinition) {
+                $deltaPayloadItems[] = new DeltaPayloadItem(
+                    $deltas->getByname($subDeltaDefinition['name']),
+                    $subDeltaDefinition['propertyName']
+                );
+            }
+        }
+
+        $delta = new Query(
+            new Location(
+                $this->rootNamespace,
+                ['Queries'],
+                $queryDefinitionName
+            ),
+            $queryDefinitionName,
+            new ModelPayload($payloadModels),
+            new DeltaPayload($deltaPayloadItems)
+        );
+
+        $existingDeltas[$queryDefinitionName] = $delta;
+
+        return $delta;
+    }
+
+    private function convertEvents(ModelSet $models, DeltaSet $deltas, array $parsedDefinitionInput): EventSet
     {
         $events = [];
         if (array_key_exists('events', $parsedDefinitionInput)) {
             foreach ($parsedDefinitionInput['events'] as $eventDefinitionInput) {
                 $events[] = $this->convertEventElement(
                     $models,
+                    $deltas,
                     $eventDefinitionInput
                 );
             }
@@ -211,20 +437,33 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
     private function convertEventElement(
         ModelSet $models,
+        DeltaSet $deltas,
         array $eventDefinitionInput
     ): Event {
 
         $eventName = $eventDefinitionInput['name'];
 
-        $eventPayloadItems = [];
-        foreach ($eventDefinitionInput['payload'] as $payloadItem) {
-            $modelName = $payloadItem['name'];
-            $model = $models->getByname($modelName);
+        $modelPayloadItems = [];
+        if (array_key_exists('payload', $eventDefinitionInput)) {
+            foreach ($eventDefinitionInput['payload'] as $payloadItem) {
+                $modelName = $payloadItem['name'];
+                $model = $models->getByname($modelName);
 
-            $eventPayloadItems[] = new EventPayloadItem(
-                $model,
-                $payloadItem['propertyName']
-            );
+                $modelPayloadItems[] = new ModelPayloadItem(
+                    $model,
+                    $payloadItem['propertyName']
+                );
+            }
+        }
+
+        $deltaPayloadItems = [];
+        if (array_key_exists('deltas', $eventDefinitionInput)) {
+            foreach ($eventDefinitionInput['deltas'] as $deltaDefinition) {
+                $deltaPayloadItems[] = new DeltaPayloadItem(
+                    $deltas->getByname($deltaDefinition['name']),
+                    $deltaDefinition['propertyName']
+                );
+            }
         }
 
         $eventMetaItems = [];
@@ -248,7 +487,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $eventName
             ),
             $eventName,
-            new EventPayload($eventPayloadItems),
+            new ModelPayload($modelPayloadItems),
+            new DeltaPayload($deltaPayloadItems),
             new EventMeta($eventMetaItems)
         );
     }

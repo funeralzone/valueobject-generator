@@ -50,12 +50,10 @@ final class ModelSet implements Countable
             /** @var Model $model */
             $indexedModels[$model->definitionName()] = $model;
 
-            foreach ($model->children()->all() as $childModel) {
-                $models = array_merge(
-                    $models,
-                    $this->indexModelsByName($model->children()->all())
-                );
-            }
+            $indexedModels = array_merge(
+                $indexedModels,
+                $this->indexModelsByName($model->children()->all())
+            );
         }
         return $indexedModels;
     }

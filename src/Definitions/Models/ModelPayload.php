@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace Funeralzone\ValueObjectGenerator\Definitions\Events;
+namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
 use Countable;
-use Funeralzone\ValueObjectGenerator\Definitions\Models\Exceptions\InvalidEventPayloadItem;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Exceptions\InvalidModelPayloadItem;
 
-final class EventPayload implements Countable
+final class ModelPayload implements Countable
 {
     private $payload;
 
@@ -29,8 +29,8 @@ final class EventPayload implements Countable
     private function validateInput(array $models): void
     {
         foreach ($models as $model) {
-            if (! $model instanceof EventPayloadItem) {
-                throw new InvalidEventPayloadItem;
+            if (! $model instanceof ModelPayloadItem) {
+                throw new InvalidModelPayloadItem;
             }
         }
     }

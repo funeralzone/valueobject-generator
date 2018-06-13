@@ -1,11 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Funeralzone\ValueObjectGenerator\Definitions\Events;
+namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
-use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
-
-final class EventPayloadItem
+final class ModelPayloadItem
 {
     private $model;
     private $propertyName;
