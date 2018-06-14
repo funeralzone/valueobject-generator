@@ -13,10 +13,7 @@ final class DefinedModel implements Model
     private $instantiationLocation;
     private $definitionName;
     private $type;
-    private $nullable;
-    private $propertyName;
     private $external;
-    private $export;
     private $childModels;
     private $properties;
     private $decorator;

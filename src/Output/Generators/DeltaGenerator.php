@@ -7,5 +7,5 @@ use Funeralzone\ValueObjectGenerator\Definitions\Deltas\Delta;
 
 interface DeltaGenerator
 {
-    public function generate(Delta $delta): void;
+    public function generate(Delta $delta, string $outputFolderPath): void;
 }

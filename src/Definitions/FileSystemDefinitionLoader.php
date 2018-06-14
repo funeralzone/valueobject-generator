@@ -14,11 +14,11 @@ final class FileSystemDefinitionLoader implements DefinitionLoader
         $this->converter = $converter;
     }
 
-    public function load(string $source): Definition
+    public function load(array $rootNamespace, string $source): Definition
     {
         if (is_file($source)) {
             $contents = file_get_contents($source);
-            $definition = $this->converter->convert($contents);
+            $definition = $this->converter->convert($rootNamespace, $contents);
             return $definition;
         } else {
             throw new DefinitionSourceDoesNotExist($source);

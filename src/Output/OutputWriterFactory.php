@@ -7,5 +7,5 @@ use Funeralzone\ValueObjectGenerator\Definitions\Location;
 
 interface OutputWriterFactory
 {
-    public function makeWriter(Location $location): OutputWriter;
+    public function makeWriter(string $outputFolderPath, Location $location): OutputWriter;
 }

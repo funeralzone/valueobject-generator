@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators;
 
-use Funeralzone\ValueObjectGenerator\Repositories\ExternalModels\Exceptions\ExternalModelTypeDoesNotExist;
+use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\Exceptions\ModelDecoratorDoesNotExist;
 
 final class NullModelDecoratorRepository implements ModelDecoratorRepository
 {
@@ -14,7 +14,7 @@ final class NullModelDecoratorRepository implements ModelDecoratorRepository
 
     public function get(string $item): ModelDecorator
     {
-        throw new ExternalModelTypeDoesNotExist($item);
+        throw new ModelDecoratorDoesNotExist($item);
     }
 
     public function all(): array

@@ -7,5 +7,5 @@ use Funeralzone\ValueObjectGenerator\Definitions\Events\Event;
 
 interface EventGenerator
 {
-    public function generate(Event $model);
+    public function generate(Event $model, string $outputFolderPath);
 }

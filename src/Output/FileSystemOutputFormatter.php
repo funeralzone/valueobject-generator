@@ -5,16 +5,9 @@ namespace Funeralzone\ValueObjectGenerator\Output;
 
 final class FileSystemOutputFormatter implements OutputFormatter
 {
-    private $rootFolderPath;
-
-    public function __construct(string $rootFolderPath)
+    public function format(string $outputFolderPath): void
     {
-        $this->rootFolderPath = rtrim($rootFolderPath, '/') . '/';
-    }
-
-    public function format(): void
-    {
-        $this->cleanFolder($this->rootFolderPath);
+        $this->cleanFolder($outputFolderPath);
     }
 
     private function cleanFolder(string $folderPath): void

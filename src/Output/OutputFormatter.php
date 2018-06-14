@@ -5,5 +5,5 @@ namespace Funeralzone\ValueObjectGenerator\Output;
 
 interface OutputFormatter
 {
-    public function format(): void;
+    public function format(string $outputFolderPath): void;
 }

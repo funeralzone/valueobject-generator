@@ -27,10 +27,8 @@ class DefaultEventGenerator implements EventGenerator
         $this->templateName = $templateName;
     }
 
-    public function generate(Event $event)
+    public function generate(Event $event, string $outputFolderPath)
     {
-        $outputWriter = $this->writerFactory->makeWriter($event->location());
-
         $modelNamer = new ModelNamer;
         $useStatements = [];
         foreach ($event->payload()->all() as $payloadItem) {
@@ -61,6 +59,7 @@ class DefaultEventGenerator implements EventGenerator
             'useStatements' => array_unique($useStatements),
         ]);
 
+        $outputWriter = $this->writerFactory->makeWriter($outputFolderPath, $event->location());
         $outputWriter->write($event->definitionName() . '.php', $source);
     }
 }

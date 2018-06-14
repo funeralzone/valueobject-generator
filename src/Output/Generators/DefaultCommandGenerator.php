@@ -26,10 +26,8 @@ class DefaultCommandGenerator implements CommandGenerator
         $this->templateName = $templateName;
     }
 
-    public function generate(Command $command): void
+    public function generate(Command $command, string $outputFolderPath): void
     {
-        $outputWriter = $this->writerFactory->makeWriter($command->location());
-
         $modelNamer = new ModelNamer;
         $useStatements = [];
         foreach ($command->payload()->all() as $payloadItem) {
@@ -51,6 +49,7 @@ class DefaultCommandGenerator implements CommandGenerator
             'useStatements' => array_unique($useStatements),
         ]);
 
+        $outputWriter = $this->writerFactory->makeWriter($outputFolderPath, $command->location());
         $outputWriter->write($command->definitionName() . '.php', $source);
     }
 }

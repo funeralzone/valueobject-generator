@@ -5,5 +5,5 @@ namespace Funeralzone\ValueObjectGenerator\Definitions;
 
 interface DefinitionConverter
 {
-    public function convert(string $definitionInput): Definition;
+    public function convert(array $rootNamespace, string $definitionInput): Definition;
 }

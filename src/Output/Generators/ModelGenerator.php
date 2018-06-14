@@ -7,5 +7,5 @@ use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 
 interface ModelGenerator
 {
-    public function generate(Model $model);
+    public function generate(Model $model, string $outputFolderPath);
 }

@@ -5,5 +5,5 @@ namespace Funeralzone\ValueObjectGenerator\Definitions;
 
 interface DefinitionLoader
 {
-    public function load(string $source): Definition;
+    public function load(array $rootNamespace, string $source): Definition;
 }

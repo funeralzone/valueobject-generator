@@ -26,10 +26,8 @@ class DefaultQueryGenerator implements QueryGenerator
         $this->templateName = $templateName;
     }
 
-    public function generate(Query $query): void
+    public function generate(Query $query, string $outputFolderPath): void
     {
-        $outputWriter = $this->writerFactory->makeWriter($query->location());
-
         $modelNamer = new ModelNamer;
         $useStatements = [];
         foreach ($query->payload()->all() as $payloadItem) {
@@ -51,6 +49,7 @@ class DefaultQueryGenerator implements QueryGenerator
             'useStatements' => array_unique($useStatements),
         ]);
 
+        $outputWriter = $this->writerFactory->makeWriter($outputFolderPath, $query->location());
         $outputWriter->write($query->definitionName() . '.php', $source);
     }
 }

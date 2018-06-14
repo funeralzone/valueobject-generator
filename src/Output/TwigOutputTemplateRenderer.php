@@ -36,7 +36,7 @@ final class TwigOutputTemplateRenderer implements OutputTemplateRenderer
 
     private function twigEnvironment(): Twig_Environment
     {
-        if (! $this->twigEnvironment) {
+        if (!$this->twigEnvironment) {
             $loader = new TwigTemplateLoader($this->buildTemplateRepository());
             $this->twigEnvironment = new Twig_Environment(
                 $loader,
@@ -50,7 +50,7 @@ final class TwigOutputTemplateRenderer implements OutputTemplateRenderer
 
     private function extendTwig(Twig_Environment $environment): void
     {
-        $environment->addFilter(new Twig_Filter('ucFirst', function($input){
+        $environment->addFilter(new Twig_Filter('ucFirst', function ($input) {
             if (is_string($input)) {
                 return ucfirst($input);
             } else {
@@ -58,7 +58,7 @@ final class TwigOutputTemplateRenderer implements OutputTemplateRenderer
             }
         }));
 
-        $environment->addFunction(new Twig_Function('makeNonNullModelName', function($input){
+        $environment->addFunction(new Twig_Function('makeNonNullModelName', function ($input) {
             $modelNamer = new ModelNamer();
             if ($input instanceof Model) {
                 /** @var Model $input */

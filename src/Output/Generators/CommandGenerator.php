@@ -7,5 +7,5 @@ use Funeralzone\ValueObjectGenerator\Definitions\Commands\Command;
 
 interface CommandGenerator
 {
-    public function generate(Command $command): void;
+    public function generate(Command $command, string $outputFolderPath): void;
 }

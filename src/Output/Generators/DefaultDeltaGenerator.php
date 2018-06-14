@@ -25,7 +25,7 @@ class DefaultDeltaGenerator implements DeltaGenerator
         $this->templateName = $templateName;
     }
 
-    public function generate(Delta $delta): void
+    public function generate(Delta $delta, string $outputFolderPath): void
     {
         $useStatements = [];
         $valueObjectFactoryOverrides = [];
@@ -51,7 +51,7 @@ class DefaultDeltaGenerator implements DeltaGenerator
             'useStatements' => array_unique($useStatements)
         ]);
 
-        $outputWriter = $this->writerFactory->makeWriter($delta->location());
+        $outputWriter = $this->writerFactory->makeWriter($outputFolderPath, $delta->location());
         $outputWriter->write($delta->location()->name() . '.php', $source);
     }
 }

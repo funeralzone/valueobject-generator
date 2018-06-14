@@ -20,10 +20,10 @@ class DefaultModelGenerator implements ModelGenerator
         $this->outputTemplateRenderer = $outputTemplateRenderer;
     }
 
-    public function generate(Model $model)
+    public function generate(Model $model, string $outputFolderPath)
     {
         if ($model->creatable()) {
-            $outputWriter = $this->writerFactory->makeWriter($model->referenceLocation());
+            $outputWriter = $this->writerFactory->makeWriter($outputFolderPath, $model->referenceLocation());
 
             $model->type()->generate(
                 $this->outputTemplateRenderer,
@@ -32,7 +32,7 @@ class DefaultModelGenerator implements ModelGenerator
             );
 
             foreach ($model->children()->all() as $childModel) {
-                $this->generate($childModel);
+                $this->generate($childModel, $outputFolderPath);
             }
         }
     }

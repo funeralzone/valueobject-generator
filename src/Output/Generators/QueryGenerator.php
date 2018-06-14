@@ -7,5 +7,5 @@ use Funeralzone\ValueObjectGenerator\Definitions\Queries\Query;
 
 interface QueryGenerator
 {
-    public function generate(Query $query): void;
+    public function generate(Query $query, string $outputFolderPath): void;
 }

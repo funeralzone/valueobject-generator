@@ -8,16 +8,9 @@ use Funeralzone\ValueObjectGenerator\Output\Exceptions\OutputLocationCouldNotBeC
 
 final class FileSystemOutputWriterFactory implements OutputWriterFactory
 {
-    private $rootFolderPath;
-
-    public function __construct(string $rootFolderPath)
+    public function makeWriter(string $outputFolderPath, Location $location): OutputWriter
     {
-        $this->rootFolderPath = rtrim($rootFolderPath, '/') . '/';
-    }
-
-    public function makeWriter(Location $location): OutputWriter
-    {
-        $targetFolderPath = $this->rootFolderPath . implode('/', $location->relativeNamespace()) . '/';
+        $targetFolderPath = $outputFolderPath. implode('/', $location->relativeNamespace()) . '/';
         $this->makeDirectory($targetFolderPath);
         return new FileSystemOutputWriter($targetFolderPath);
     }
