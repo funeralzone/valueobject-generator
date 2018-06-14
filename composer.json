@@ -27,5 +27,8 @@
   "prefer-stable": true,
   "config": {
     "preferred-install": "dist"
-  }
+  },
+  "bin": [
+    "bin/generate"
+  ]
 }
