@@ -253,7 +253,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
                 $payloadModels[] = new ModelPayloadItem(
                     $model,
-                    $payloadModelDefinition['propertyName']
+                    $payloadModelDefinition['propertyName'],
+                    false
                 );
             }
         }
@@ -331,11 +332,13 @@ final class YamlDefinitionConverter implements DefinitionConverter
         if (array_key_exists('payload', $commandDefinitionInput)) {
             foreach ($commandDefinitionInput['payload'] as $payloadModelDefinition) {
                 $modelName = $payloadModelDefinition['name'];
+                $required = (bool) ($payloadModelDefinition['required']) ?? false;
                 $model = $models->getByname($modelName);
 
                 $payloadModels[] = new ModelPayloadItem(
                     $model,
-                    $payloadModelDefinition['propertyName']
+                    $payloadModelDefinition['propertyName'],
+                    $required
                 );
             }
         }
@@ -403,7 +406,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
                 $payloadModels[] = new ModelPayloadItem(
                     $model,
-                    $payloadModelDefinition['propertyName']
+                    $payloadModelDefinition['propertyName'],
+                    false
                 );
             }
         }
@@ -467,11 +471,13 @@ final class YamlDefinitionConverter implements DefinitionConverter
         if (array_key_exists('payload', $eventDefinitionInput)) {
             foreach ($eventDefinitionInput['payload'] as $payloadItem) {
                 $modelName = $payloadItem['name'];
+                $required = (bool) ($eventDefinitionInput['required']) ?? false;
                 $model = $models->getByname($modelName);
 
                 $modelPayloadItems[] = new ModelPayloadItem(
                     $model,
-                    $payloadItem['propertyName']
+                    $payloadItem['propertyName'],
+                    $required
                 );
             }
         }

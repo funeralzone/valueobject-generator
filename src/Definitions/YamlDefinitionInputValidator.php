@@ -48,6 +48,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
 
     private $commandSchemaRules = [
         'name' => 'required|string',
+        'require' => 'boolean',
 
         'payload' => 'required|array',
         'payload.*.name' => 'required|string',
@@ -72,6 +73,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
 
     private $eventSchemaRules = [
         'name' => 'required|string',
+        'require' => 'boolean',
 
         'payload' => 'array',
         'payload.*.name' => 'required|string',

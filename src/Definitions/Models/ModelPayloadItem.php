@@ -7,13 +7,16 @@ final class ModelPayloadItem
 {
     private $model;
     private $propertyName;
+    private $required;
 
     public function __construct(
         Model $model,
-        string $propertyName
+        string $propertyName,
+        bool $required
     ) {
         $this->model = $model;
         $this->propertyName = $propertyName;
+        $this->required = $required;
     }
 
     public function model(): Model
@@ -24,5 +27,10 @@ final class ModelPayloadItem
     public function propertyName(): string
     {
         return $this->propertyName;
+    }
+
+    public function required(): bool
+    {
+        return $this->required;
     }
 }
