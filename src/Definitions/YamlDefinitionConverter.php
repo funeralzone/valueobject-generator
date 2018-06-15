@@ -332,7 +332,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
         if (array_key_exists('payload', $commandDefinitionInput)) {
             foreach ($commandDefinitionInput['payload'] as $payloadModelDefinition) {
                 $modelName = $payloadModelDefinition['name'];
-                $required = (bool) ($payloadModelDefinition['required']) ?? false;
+                $required = (bool) ($payloadModelDefinition['required'] ?? false);
                 $model = $models->getByname($modelName);
 
                 $payloadModels[] = new ModelPayloadItem(
@@ -471,7 +471,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
         if (array_key_exists('payload', $eventDefinitionInput)) {
             foreach ($eventDefinitionInput['payload'] as $payloadItem) {
                 $modelName = $payloadItem['name'];
-                $required = (bool) ($payloadItem['required']) ?? false;
+                $required = (bool) ($payloadItem['required'] ?? false);
                 $model = $models->getByname($modelName);
 
                 $modelPayloadItems[] = new ModelPayloadItem(
@@ -497,11 +497,13 @@ final class YamlDefinitionConverter implements DefinitionConverter
             foreach ($eventDefinitionInput['meta'] as $metaItem) {
                 $modelName = $metaItem['name'];
                 $model = $models->getByname($modelName);
+                $required = (bool) ($metaItem['required'] ?? false);
 
                 $eventMetaItems[] = new EventMetaItem(
                     $model,
                     $metaItem['propertyName'],
-                    $metaItem['key']
+                    $metaItem['key'],
+                    $required
                 );
             }
         }

@@ -34,10 +34,15 @@ class DefaultEventGenerator implements EventGenerator
         foreach ($event->payload()->all() as $payloadItem) {
             /** @var ModelPayloadItem $payloadItem */
             $model = $payloadItem->model();
-            $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
-            $useStatements[] = $model->instantiationLocation()->namespaceAsString().'\\'.$nonNullModelName;
 
-            $useStatements[] = $model->referenceLocation()->path();
+            if ($payloadItem->required()) {
+                $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
+                $useStatements[] = $model->instantiationLocation()->namespaceAsString() . '\\' . $nonNullModelName;
+                $useStatements[] = $model->referenceLocation()->path();
+            } else {
+                $useStatements[] = $model->referenceLocation()->path();
+                $useStatements[] = $model->instantiationLocation()->path();
+            }
         }
 
         foreach ($event->deltas()->all() as $deltaPayloadItem) {
@@ -48,9 +53,14 @@ class DefaultEventGenerator implements EventGenerator
         foreach ($event->meta()->all() as $metaItem) {
             /** @var EventMetaItem $metaItem */
             $model = $metaItem->model();
-            $useStatements[] = $model->instantiationLocation()->path();
-            if (!$model->referenceLocation()->isSame($model->instantiationLocation())) {
+
+            if ($metaItem->required()) {
+                $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
+                $useStatements[] = $model->instantiationLocation()->namespaceAsString() . '\\' . $nonNullModelName;
                 $useStatements[] = $model->referenceLocation()->path();
+            } else {
+                $useStatements[] = $model->referenceLocation()->path();
+                $useStatements[] = $model->instantiationLocation()->path();
             }
         }
 

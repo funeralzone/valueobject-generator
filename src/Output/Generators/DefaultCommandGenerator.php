@@ -33,10 +33,15 @@ class DefaultCommandGenerator implements CommandGenerator
         foreach ($command->payload()->all() as $payloadItem) {
             /** @var ModelPayloadItem $payloadItem */
             $model = $payloadItem->model();
-            $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
-            $useStatements[] = $model->instantiationLocation()->namespaceAsString().'\\'.$nonNullModelName;
 
-            $useStatements[] = $model->referenceLocation()->path();
+            if ($payloadItem->required()) {
+                $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
+                $useStatements[] = $model->instantiationLocation()->namespaceAsString() . '\\' . $nonNullModelName;
+                $useStatements[] = $model->referenceLocation()->path();
+            } else {
+                $useStatements[] = $model->referenceLocation()->path();
+                $useStatements[] = $model->instantiationLocation()->path();
+            }
         }
 
         foreach ($command->deltas()->all() as $deltaPayloadItem) {

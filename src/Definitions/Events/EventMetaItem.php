@@ -10,15 +10,18 @@ final class EventMetaItem
     private $model;
     private $propertyName;
     private $metaKey;
+    private $required;
 
     public function __construct(
         Model $model,
         string $propertyName,
-        string $metaKey
+        string $metaKey,
+        bool $required
     ) {
         $this->model = $model;
         $this->propertyName = $propertyName;
         $this->metaKey = $metaKey;
+        $this->required = $required;
     }
 
     public function model(): Model
@@ -34,5 +37,10 @@ final class EventMetaItem
     public function metaKey(): string
     {
         return $this->metaKey;
+    }
+
+    public function required(): bool
+    {
+        return $this->required;
     }
 }

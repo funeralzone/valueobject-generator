@@ -83,6 +83,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'meta.*.name' => 'required|string',
         'meta.*.propertyName' => 'required|string',
         'meta.*.key' => 'required|string',
+        'meta.*.required' => 'boolean',
 
         'deltas' => 'array',
         'deltas.*.name' => 'required|string',
