@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Output\Generators;
 
 use Funeralzone\ValueObjectGenerator\Conventions\ModelNamer;
-use Funeralzone\ValueObjectGenerator\Definitions\Deltas\DeltaPayloadItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelPayloadItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Queries\Query;
 use Funeralzone\ValueObjectGenerator\Output\OutputTemplateRenderer;
@@ -37,11 +36,6 @@ class DefaultQueryGenerator implements QueryGenerator
             $useStatements[] = $model->instantiationLocation()->namespaceAsString().'\\'.$nonNullModelName;
 
             $useStatements[] = $model->referenceLocation()->path();
-        }
-
-        foreach ($query->deltas()->all() as $deltaPayloadItem) {
-            /** @var DeltaPayloadItem $deltaPayloadItem */
-            $useStatements[] = $deltaPayloadItem->delta()->location()->path();
         }
 
         $source = $this->outputTemplateRenderer->render($this->templateName, [

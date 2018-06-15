@@ -29,7 +29,7 @@ final class ModelSet implements Countable
         return array_key_exists($name, $this->modelsByName);
     }
 
-    public function getByname(string $name): Model
+    public function getByName(string $name): Model
     {
         if ($this->hasByName($name)) {
             return $this->modelsByName[$name];

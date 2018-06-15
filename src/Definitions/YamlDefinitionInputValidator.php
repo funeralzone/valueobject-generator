@@ -65,10 +65,6 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'payload' => 'required|array',
         'payload.*.name' => 'required|string',
         'payload.*.propertyName' => 'required|string',
-
-        'deltas' => 'array',
-        'deltas.*.name' => 'required|string',
-        'deltas.*.propertyName' => 'required|string',
     ];
 
     private $eventSchemaRules = [
@@ -373,16 +369,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         }
     }
 
-    private function validateQueries(array $modelNames, array $deltaNames, array $definitionInput): void
+    private function validateQueries(array $modelNames, array $definitionInput): void
     {
         if (array_key_exists('queries', $definitionInput) && is_array($definitionInput['queries'])) {
             foreach ($definitionInput['queries'] as $commandDefinition) {
-                $this->validateQueryElement($modelNames, $deltaNames, $commandDefinition);
+                $this->validateQueryElement($modelNames, $commandDefinition);
             }
         }
     }
 
-    private function validateQueryElement(array $modelNames, array $deltaNames, array $queryDefinition): void
+    private function validateQueryElement(array $modelNames, array $queryDefinition): void
     {
         $queryName = $queryDefinition['name'] ?? 'N\A';
 
@@ -395,19 +391,6 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                         $queryName,
                         $modelName
                     );
-                }
-            }
-
-            if (array_key_exists('deltas', $queryDefinition)) {
-                foreach ($queryDefinition['deltas'] as $deltaItem) {
-                    $deltaName = $deltaItem['name'];
-                    if (!in_array($deltaName, $deltaNames)) {
-                        $this->errors[] = sprintf(
-                            'Query "%s" - "%s" is not a valid delta',
-                            $queryName,
-                            $deltaName
-                        );
-                    }
                 }
             }
         } else {
