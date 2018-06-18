@@ -32,12 +32,8 @@ class DefaultDeltaGenerator implements DeltaGenerator
         foreach ($delta->payload()->all() as $payloadItem) {
             /** @var ModelPayloadItem $payloadItem */
             $model = $payloadItem->model();
-            $useStatements[] = $model->referenceLocation()->path();
-            if (! $model->referenceLocation()->isSame($model->instantiationLocation())) {
-                $useStatements[] = $model->instantiationLocation()->path();
 
-                $valueObjectFactoryOverrides[] = $payloadItem;
-            }
+            $useStatements[] = $model->instantiationLocation()->path();
         }
 
         foreach ($delta->subDeltas()->all() as $deltaPayloadItem) {

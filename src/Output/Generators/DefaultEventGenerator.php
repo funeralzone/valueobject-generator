@@ -38,9 +38,7 @@ class DefaultEventGenerator implements EventGenerator
             if ($payloadItem->required()) {
                 $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
                 $useStatements[] = $model->instantiationLocation()->namespaceAsString() . '\\' . $nonNullModelName;
-                $useStatements[] = $model->referenceLocation()->path();
             } else {
-                $useStatements[] = $model->referenceLocation()->path();
                 $useStatements[] = $model->instantiationLocation()->path();
             }
         }
@@ -57,9 +55,7 @@ class DefaultEventGenerator implements EventGenerator
             if ($metaItem->required()) {
                 $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
                 $useStatements[] = $model->instantiationLocation()->namespaceAsString() . '\\' . $nonNullModelName;
-                $useStatements[] = $model->referenceLocation()->path();
             } else {
-                $useStatements[] = $model->referenceLocation()->path();
                 $useStatements[] = $model->instantiationLocation()->path();
             }
         }

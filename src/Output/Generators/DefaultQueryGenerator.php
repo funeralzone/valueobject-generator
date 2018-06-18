@@ -32,10 +32,12 @@ class DefaultQueryGenerator implements QueryGenerator
         foreach ($query->payload()->all() as $payloadItem) {
             /** @var ModelPayloadItem $payloadItem */
             $model = $payloadItem->model();
-            $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
-            $useStatements[] = $model->instantiationLocation()->namespaceAsString().'\\'.$nonNullModelName;
-
-            $useStatements[] = $model->referenceLocation()->path();
+            if ($payloadItem->required()) {
+                $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
+                $useStatements[] = $model->instantiationLocation()->namespaceAsString() . '\\' . $nonNullModelName;
+            } else {
+                $useStatements[] = $model->instantiationLocation()->path();
+            }
         }
 
         $source = $this->outputTemplateRenderer->render($this->templateName, [
