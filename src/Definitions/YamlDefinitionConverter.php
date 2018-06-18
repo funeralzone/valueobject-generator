@@ -399,12 +399,13 @@ final class YamlDefinitionConverter implements DefinitionConverter
         if (array_key_exists('payload', $queryDefinitionInput)) {
             foreach ($queryDefinitionInput['payload'] as $payloadModelDefinition) {
                 $modelName = $payloadModelDefinition['name'];
+                $required = (bool) ($payloadModelDefinition['required'] ?? false);
                 $model = $models->getByName($modelName);
 
                 $payloadModels[] = new ModelPayloadItem(
                     $model,
                     $payloadModelDefinition['propertyName'],
-                    false
+                    $required
                 );
             }
         }
