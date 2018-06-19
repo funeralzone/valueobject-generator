@@ -7,13 +7,16 @@ final class DeltaPayloadItem
 {
     private $delta;
     private $propertyName;
+    private $useRootData;
 
     public function __construct(
         Delta $delta,
-        string $propertyName
+        string $propertyName,
+        bool $useRootData
     ) {
         $this->delta = $delta;
         $this->propertyName = $propertyName;
+        $this->useRootData = $useRootData;
     }
 
     public function delta(): Delta
@@ -24,5 +27,10 @@ final class DeltaPayloadItem
     public function propertyName(): string
     {
         return $this->propertyName;
+    }
+
+    public function useRootData(): bool
+    {
+        return $this->useRootData;
     }
 }

@@ -44,6 +44,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'deltas' => 'array',
         'deltas.*.name' => 'required|string',
         'deltas.*.propertyName' => 'required|string',
+        'deltas.*.useRootData' => 'boolean',
     ];
 
     private $commandSchemaRules = [
@@ -57,6 +58,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'deltas' => 'array',
         'deltas.*.name' => 'required|string',
         'deltas.*.propertyName' => 'required|string',
+        'deltas.*.useRootData' => 'boolean',
     ];
 
     private $querySchemaRules = [
@@ -72,6 +74,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
 
         'payload' => 'array',
         'payload.*.name' => 'required|string',
+
         'payload.*.propertyName' => 'required|string',
         'payload.*.required' => 'boolean',
 
@@ -84,6 +87,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'deltas' => 'array',
         'deltas.*.name' => 'required|string',
         'deltas.*.propertyName' => 'required|string',
+        'deltas.*.useRootData' => 'boolean',
     ];
 
     public function __construct(

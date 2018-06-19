@@ -264,7 +264,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
             foreach ($deltaDefinitionInput['deltas'] as $subDeltaDefinition) {
                 $subDeltaPayloadItems[] = new DeltaPayloadItem(
                     $existingDeltas[$subDeltaDefinition['name']],
-                    $subDeltaDefinition['propertyName']
+                    $subDeltaDefinition['propertyName'],
+                    (bool) ($subDeltaDefinition['useRootData'] ?? false)
                 );
             }
         }
@@ -348,7 +349,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
             foreach ($commandDefinitionInput['deltas'] as $subDeltaDefinition) {
                 $deltaPayloadItems[] = new DeltaPayloadItem(
                     $deltas->getByname($subDeltaDefinition['name']),
-                    $subDeltaDefinition['propertyName']
+                    $subDeltaDefinition['propertyName'],
+                    (bool) ($subDeltaDefinition['useRootData'] ?? false)
                 );
             }
         }
@@ -474,7 +476,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
             foreach ($eventDefinitionInput['deltas'] as $deltaDefinition) {
                 $deltaPayloadItems[] = new DeltaPayloadItem(
                     $deltas->getByname($deltaDefinition['name']),
-                    $deltaDefinition['propertyName']
+                    $deltaDefinition['propertyName'],
+                    (bool) ($deltaDefinition['useRootData'] ?? false)
                 );
             }
         }
