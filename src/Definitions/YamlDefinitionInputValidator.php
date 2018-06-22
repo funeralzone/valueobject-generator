@@ -50,7 +50,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     private $commandSchemaRules = [
         'name' => 'required|string',
 
-        'payload' => 'required|array',
+        'payload' => 'array',
         'payload.*.name' => 'required|string',
         'payload.*.propertyName' => 'required|string',
         'payload.*.required' => 'boolean',
@@ -64,7 +64,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     private $querySchemaRules = [
         'name' => 'required|string',
 
-        'payload' => 'required|array',
+        'payload' => 'array',
         'payload.*.name' => 'required|string',
         'payload.*.propertyName' => 'required|string',
     ];
@@ -297,11 +297,6 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                                 );
                             }
                         }
-                    } else {
-                        $this->errors[] = sprintf(
-                            'Delta "%s" - no "payload" has been defined',
-                            $deltaName
-                        );
                     }
                 }
 
@@ -342,14 +337,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         $commandName = $commandDefinition['name'] ?? 'N\A';
 
         if ($this->validateSchema('Command', $commandName, $this->commandSchemaRules, $commandDefinition)) {
-            foreach ($commandDefinition['payload'] as $payloadItem) {
-                $commandName = $payloadItem['name'];
-                if (!in_array($commandName, $modelNames)) {
-                    $this->errors[] = sprintf(
-                        'Command "%s" - "%s" is not a valid model',
-                        $commandName,
-                        $commandName
-                    );
+            if (array_key_exists('payload', $commandDefinition)) {
+                foreach ($commandDefinition['payload'] as $payloadItem) {
+                    $commandName = $payloadItem['name'];
+                    if (!in_array($commandName, $modelNames)) {
+                        $this->errors[] = sprintf(
+                            'Command "%s" - "%s" is not a valid model',
+                            $commandName,
+                            $commandName
+                        );
+                    }
                 }
             }
 
@@ -387,14 +384,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         $queryName = $queryDefinition['name'] ?? 'N\A';
 
         if ($this->validateSchema('Query', $queryName, $this->querySchemaRules, $queryDefinition)) {
-            foreach ($queryDefinition['payload'] as $payloadItem) {
-                $modelName = $payloadItem['name'];
-                if (!in_array($modelName, $modelNames)) {
-                    $this->errors[] = sprintf(
-                        'Query "%s" - "%s" is not a valid model',
-                        $queryName,
-                        $modelName
-                    );
+            if (array_key_exists('payload', $queryDefinition)) {
+                foreach ($queryDefinition['payload'] as $payloadItem) {
+                    $modelName = $payloadItem['name'];
+                    if (!in_array($modelName, $modelNames)) {
+                        $this->errors[] = sprintf(
+                            'Query "%s" - "%s" is not a valid model',
+                            $queryName,
+                            $modelName
+                        );
+                    }
                 }
             }
         } else {
