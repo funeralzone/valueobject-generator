@@ -26,10 +26,10 @@ final class QuerySet implements Countable
         return count($this->commands);
     }
 
-    private function validateInput(array $commands): void
+    private function validateInput(array $queries): void
     {
-        foreach ($commands as $model) {
-            if (! $model instanceof Query) {
+        foreach ($queries as $query) {
+            if (! $query instanceof Query) {
                 throw new InvalidQuery;
             }
         }

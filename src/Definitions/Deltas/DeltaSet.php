@@ -24,6 +24,11 @@ final class DeltaSet implements Countable
         return $this->deltas;
     }
 
+    public function allByName(): array
+    {
+        return $this->deltasByName;
+    }
+
     public function count()
     {
         return count($this->deltas);
@@ -43,10 +48,10 @@ final class DeltaSet implements Countable
         }
     }
 
-    private function validateInput(array $events): void
+    private function validateInput(array $deltas): void
     {
-        foreach ($events as $model) {
-            if (! $model instanceof Delta) {
+        foreach ($deltas as $delta) {
+            if (! $delta instanceof Delta) {
                 throw new InvalidDelta;
             }
         }

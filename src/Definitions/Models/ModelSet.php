@@ -24,6 +24,11 @@ final class ModelSet implements Countable
         return $this->models;
     }
 
+    public function allByName(): array
+    {
+        return $this->modelsByName;
+    }
+
     public function hasByName(string $name): bool
     {
         return array_key_exists($name, $this->modelsByName);

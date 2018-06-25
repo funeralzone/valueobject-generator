@@ -28,8 +28,8 @@ final class EventSet implements Countable
 
     private function validateInput(array $events): void
     {
-        foreach ($events as $model) {
-            if (! $model instanceof Event) {
+        foreach ($events as $event) {
+            if (! $event instanceof Event) {
                 throw new InvalidEventPayloadItem;
             }
         }

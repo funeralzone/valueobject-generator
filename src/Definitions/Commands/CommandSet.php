@@ -28,8 +28,8 @@ final class CommandSet implements Countable
 
     private function validateInput(array $commands): void
     {
-        foreach ($commands as $model) {
-            if (! $model instanceof Command) {
+        foreach ($commands as $command) {
+            if (! $command instanceof Command) {
                 throw new InvalidCommand;
             }
         }

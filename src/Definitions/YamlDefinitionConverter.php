@@ -49,25 +49,30 @@ final class YamlDefinitionConverter implements DefinitionConverter
         $this->definitionErrorRenderer = $modelDefinitionErrorRenderer;
     }
 
-    public function convert(array $rootNamespace, string $definitionInput): Definition
-    {
+    public function convert(
+        array $rootNamespace,
+        string $definitionInput,
+        Definition $baseDefinition = null
+    ): Definition {
         $parsedDefinitionInput = Yaml::parse($definitionInput);
 
-        $this->validateInput($parsedDefinitionInput);
+        $this->validateInput($parsedDefinitionInput, $baseDefinition);
 
         $relativeNamespace = $this->getGlobalRelativeNamespace($parsedDefinitionInput);
 
         $models = $this->convertModel(
             $rootNamespace,
             $relativeNamespace,
-            $parsedDefinitionInput
+            $parsedDefinitionInput,
+            $baseDefinition
         );
 
         $deltas = $this->convertDeltas(
             $rootNamespace,
             $relativeNamespace,
             $models,
-            $parsedDefinitionInput
+            $parsedDefinitionInput,
+            $baseDefinition
         );
 
         $commands = $this->convertCommands(
@@ -93,18 +98,24 @@ final class YamlDefinitionConverter implements DefinitionConverter
             $parsedDefinitionInput
         );
 
-        return new Definition(
+        $definition = new Definition(
             $models,
             $deltas,
             $events,
             $commands,
             $queries
         );
+
+        if ($baseDefinition) {
+            return $baseDefinition->merge($definition);
+        } else {
+            return $definition;
+        }
     }
 
-    private function validateInput(array $modelDefinitionInput): void
+    private function validateInput(array $modelDefinitionInput, Definition $baseDefinition = null): void
     {
-        if (!$this->validator->validate($modelDefinitionInput)) {
+        if (!$this->validator->validate($modelDefinitionInput, $baseDefinition)) {
             $this->definitionErrorRenderer->render($this->validator->errors());
 
             throw new InvalidDefinition;
@@ -125,13 +136,21 @@ final class YamlDefinitionConverter implements DefinitionConverter
     private function convertModel(
         array $rootNamespace,
         array $relativeNamespace,
-        array $parsedDefinitionInput
+        array $parsedDefinitionInput,
+        Definition $baseDefinition = null
     ): ModelSet {
 
         $models = [];
-        if (array_key_exists('model', $parsedDefinitionInput)) {
-            $existingModels = [];
+        $existingModels = [];
+        if ($baseDefinition) {
+            foreach ($baseDefinition->models()->allByName() as $model) {
+                /** @var Model $model */
+                $models[] = $model;
+                $existingModels[$model->definitionName()] = $model;
+            }
+        }
 
+        if (array_key_exists('model', $parsedDefinitionInput)) {
             foreach ($parsedDefinitionInput['model'] as $key => $item) {
                 $itemNamespace = $relativeNamespace;
 
@@ -288,12 +307,21 @@ final class YamlDefinitionConverter implements DefinitionConverter
         array $rootNamespace,
         array $relativeNamespace,
         ModelSet $models,
-        array $parsedDefinitionInput
+        array $parsedDefinitionInput,
+        Definition $baseDefinition = null
     ): DeltaSet {
 
         $deltas = [];
+        $existingDeltas = [];
+        if ($baseDefinition) {
+            foreach ($baseDefinition->deltas()->allByName() as $delta) {
+                /** @var Delta $delta */
+                $deltas[] = $delta;
+                $existingDeltas[$delta->definitionName()] = $delta;
+            }
+        }
+
         if (array_key_exists('deltas', $parsedDefinitionInput)) {
-            $existingDeltas = [];
             foreach ($parsedDefinitionInput['deltas'] as $item) {
                 $itemRelativeNamespace = $relativeNamespace;
 

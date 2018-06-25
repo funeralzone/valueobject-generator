@@ -55,4 +55,44 @@ final class Definition
     {
         return $this->queries;
     }
+
+    public function merge(Definition ...$definitions): Definition
+    {
+        if (count($definitions)) {
+            array_unshift($definitions, $this);
+
+            $models = [];
+            $deltas = [];
+            $events = [];
+            $commands = [];
+            $queries = [];
+            foreach ($definitions as $definition) {
+                foreach ($definition->models->all() as $model) {
+                    $models[] = $model;
+                }
+                foreach ($definition->deltas->all() as $delta) {
+                    $deltas[] = $delta;
+                }
+                foreach ($definition->events->all() as $event) {
+                    $events[] = $event;
+                }
+                foreach ($definition->commands->all() as $command) {
+                    $commands[] = $command;
+                }
+                foreach ($definition->queries->all() as $query) {
+                    $queries[] = $query;
+                }
+            }
+
+            return new Definition(
+                new ModelSet($models),
+                new DeltaSet($deltas),
+                new EventSet($events),
+                new CommandSet($commands),
+                new QuerySet($queries)
+            );
+        } else {
+            return $this;
+        }
+    }
 }

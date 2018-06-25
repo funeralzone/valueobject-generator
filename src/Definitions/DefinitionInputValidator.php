@@ -5,6 +5,6 @@ namespace Funeralzone\ValueObjectGenerator\Definitions;
 
 interface DefinitionInputValidator
 {
-    public function validate(array $rawDefinition): bool;
+    public function validate(array $rawDefinition, Definition $baseDefinition = null): bool;
     public function errors(): array;
 }

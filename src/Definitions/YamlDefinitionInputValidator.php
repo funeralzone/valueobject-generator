@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions;
 
 use Exception;
+use Funeralzone\ValueObjectGenerator\Definitions\Deltas\Delta;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecoratorRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
@@ -131,14 +133,14 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         $this->modelTypeDecoratorRepository = $modelTypeDecoratorRepository;
     }
 
-    public function validate(array $rawDefinition): bool
+    public function validate(array $rawDefinition, Definition $baseDefinition = null): bool
     {
         $this->errors = [];
 
         $this->validateSchema('Root', 'N/A', $this->rootSchemaRules, $rawDefinition);
 
-        $modelNames = $this->validateModel($rawDefinition);
-        $deltaNames = $this->validateDeltas($modelNames, $rawDefinition);
+        $modelNames = $this->validateModel($rawDefinition, $baseDefinition);
+        $deltaNames = $this->validateDeltas($modelNames, $rawDefinition, $baseDefinition);
 
         $this->validateCommands($modelNames, $deltaNames, $rawDefinition);
         $this->validateQueries($modelNames, $rawDefinition);
@@ -152,9 +154,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         return $this->errors;
     }
 
-    private function validateModel(array $definitionInput): array
+    private function validateModel(array $definitionInput, Definition $baseDefinition = null): array
     {
         $existingModelDefinitionNames = [];
+        if ($baseDefinition) {
+            foreach ($baseDefinition->models()->allByName() as $model) {
+                /** @var Model $model */
+                $existingModelDefinitionNames[] = $model->definitionName();
+            }
+        }
+
         if (array_key_exists('model', $definitionInput) && is_array($definitionInput['model'])) {
             foreach ($definitionInput['model'] as $key => $item) {
                 if (array_key_exists('name', $item)) {
@@ -177,8 +186,6 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                     }
                 }
             }
-        } else {
-            $this->errors[] = '"model" has not been defined or is empty';
         }
         return $existingModelDefinitionNames;
     }
@@ -304,9 +311,17 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         return $existingModelDefinitionNames;
     }
 
-    private function validateDeltas(array $modelNames, array $definitionInput): array
+    private function validateDeltas(array $modelNames, array $definitionInput, Definition $baseDefinition = null): array
     {
         $existingDeltaDefinitionNames = [];
+
+        if ($baseDefinition) {
+            foreach ($baseDefinition->deltas()->allByName() as $delta) {
+                /** @var Delta $delta */
+                $existingDeltaDefinitionNames[] = $delta->definitionName();
+            }
+        }
+
         if (array_key_exists('deltas', $definitionInput) && is_array($definitionInput['deltas'])) {
             foreach ($definitionInput['deltas'] as $item) {
                 if (array_key_exists('name', $item)) {
@@ -384,8 +399,11 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         return $existingDeltaNames;
     }
 
-    private function validateCommands(array $modelNames, array $deltaNames, array $definitionInput): void
-    {
+    private function validateCommands(
+        array $modelNames,
+        array $deltaNames,
+        array $definitionInput
+    ): void {
         if (array_key_exists('commands', $definitionInput) && is_array($definitionInput['commands'])) {
             foreach ($definitionInput['commands'] as $item) {
                 if (array_key_exists('name', $item)) {
@@ -439,8 +457,10 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         }
     }
 
-    private function validateQueries(array $modelNames, array $definitionInput): void
-    {
+    private function validateQueries(
+        array $modelNames,
+        array $definitionInput
+    ): void {
         if (array_key_exists('queries', $definitionInput) && is_array($definitionInput['queries'])) {
             foreach ($definitionInput['queries'] as $item) {
                 if (array_key_exists('name', $item)) {
@@ -481,8 +501,11 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         }
     }
 
-    private function validateEvents(array $modelNames, array $deltaNames, array $definitionInput): void
-    {
+    private function validateEvents(
+        array $modelNames,
+        array $deltaNames,
+        array $definitionInput
+    ): void {
         if (array_key_exists('events', $definitionInput) && is_array($definitionInput['events'])) {
             foreach ($definitionInput['events'] as $item) {
                 if (array_key_exists('name', $item)) {
