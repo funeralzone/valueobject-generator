@@ -17,6 +17,11 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     private $modelTypeDecoratorRepository;
     private $errors;
 
+    private $modelGroupSchemRules = [
+        'namespace' => 'string',
+        'children' => 'required|array'
+    ];
+
     private $definedModelSchemaRules = [
         'name' => 'required|string',
         'type' => 'required|string',
@@ -25,12 +30,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'instantiationName' => 'string',
         'referenceName' => 'string',
         'namespace' => 'string',
-        'relativeNamespace' => 'string',
         'decorator' => 'string',
     ];
 
     private $referencedModelSchemaRules = [
         'name' => 'required|string',
+    ];
+
+    private $deltaGroupSchemRules = [
+        'namespace' => 'string',
+        'children' => 'required|array'
     ];
 
     private $deltaSchemaRules = [
@@ -47,6 +56,11 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'deltas.*.useRootData' => 'boolean',
     ];
 
+    private $commandGroupSchemRules = [
+        'namespace' => 'string',
+        'children' => 'required|array'
+    ];
+
     private $commandSchemaRules = [
         'name' => 'required|string',
 
@@ -61,12 +75,22 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'deltas.*.useRootData' => 'boolean',
     ];
 
+    private $queryGroupSchemRules = [
+        'namespace' => 'string',
+        'children' => 'required|array'
+    ];
+
     private $querySchemaRules = [
         'name' => 'required|string',
 
         'payload' => 'array',
         'payload.*.name' => 'required|string',
         'payload.*.propertyName' => 'required|string',
+    ];
+
+    private $eventGroupSchemRules = [
+        'namespace' => 'string',
+        'children' => 'required|array'
     ];
 
     private $eventSchemaRules = [
@@ -106,7 +130,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         $deltaNames = $this->validateDeltas($modelNames, $rawDefinition);
 
         $this->validateCommands($modelNames, $deltaNames, $rawDefinition);
-        $this->validateQueries($modelNames, $deltaNames, $rawDefinition);
+        $this->validateQueries($modelNames, $rawDefinition);
         $this->validateEvents($modelNames, $deltaNames, $rawDefinition);
 
         return count($this->errors) == 0;
@@ -121,11 +145,33 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     {
         $existingModelDefinitionNames = [];
         if (array_key_exists('model', $definitionInput) && is_array($definitionInput['model'])) {
-            foreach ($definitionInput['model'] as $modelDefinition) {
-                $existingModelDefinitionNames = array_unique(array_merge(
-                    $existingModelDefinitionNames,
-                    $this->validateModelElement($existingModelDefinitionNames, [], $modelDefinition)
-                ));
+            foreach ($definitionInput['model'] as $key => $item) {
+                if (array_key_exists('name', $item)) {
+                    $existingModelDefinitionNames = array_unique(array_merge(
+                        $existingModelDefinitionNames,
+                        $this->validateModelElement($existingModelDefinitionNames, [], $item)
+                    ));
+                } else {
+                    if ($this->validateSchema('Model group', 'N/A', $this->modelGroupSchemRules, $item)) {
+                        $parentPathElements = [];
+
+                        if (array_key_exists('namespace', $item)) {
+                            $groupNamespace = trim($item['namespace'], '\\');
+                            $parentPathElements = explode('\\', $groupNamespace);
+                        }
+
+                        foreach ($item['children'] as $childItem) {
+                            $existingModelDefinitionNames = array_unique(array_merge(
+                                $existingModelDefinitionNames,
+                                $this->validateModelElement(
+                                    $existingModelDefinitionNames,
+                                    $parentPathElements,
+                                    $childItem
+                                )
+                            ));
+                        }
+                    }
+                }
             }
         } else {
             $this->errors[] = '"model" has not been defined or is empty';
@@ -258,11 +304,22 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     {
         $existingDeltaDefinitionNames = [];
         if (array_key_exists('deltas', $definitionInput) && is_array($definitionInput['deltas'])) {
-            foreach ($definitionInput['deltas'] as $deltaDefinition) {
-                $existingDeltaDefinitionNames = array_unique(array_merge(
-                    $existingDeltaDefinitionNames,
-                    $this->validateDeltaElement($modelNames, $existingDeltaDefinitionNames, $deltaDefinition)
-                ));
+            foreach ($definitionInput['deltas'] as $item) {
+                if (array_key_exists('name', $item)) {
+                    $existingDeltaDefinitionNames = array_unique(array_merge(
+                        $existingDeltaDefinitionNames,
+                        $this->validateDeltaElement($modelNames, $existingDeltaDefinitionNames, $item)
+                    ));
+                } else {
+                    if ($this->validateSchema('Model group', 'N/A', $this->deltaGroupSchemRules, $item)) {
+                        foreach ($item['children'] as $childItem) {
+                            $existingDeltaDefinitionNames = array_unique(array_merge(
+                                $existingDeltaDefinitionNames,
+                                $this->validateDeltaElement($modelNames, $existingDeltaDefinitionNames, $childItem)
+                            ));
+                        }
+                    }
+                }
             }
         }
         return $existingDeltaDefinitionNames;
@@ -326,8 +383,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     private function validateCommands(array $modelNames, array $deltaNames, array $definitionInput): void
     {
         if (array_key_exists('commands', $definitionInput) && is_array($definitionInput['commands'])) {
-            foreach ($definitionInput['commands'] as $commandDefinition) {
-                $this->validateCommandElement($modelNames, $deltaNames, $commandDefinition);
+            foreach ($definitionInput['commands'] as $item) {
+                if (array_key_exists('name', $item)) {
+                    $this->validateCommandElement($modelNames, $deltaNames, $item);
+                } else {
+                    if ($this->validateSchema('Command group', 'N/A', $this->commandGroupSchemRules, $item)) {
+                        foreach ($item['children'] as $childItem) {
+                            $this->validateCommandElement($modelNames, $deltaNames, $childItem);
+                        }
+                    }
+                }
             }
         }
     }
@@ -373,8 +438,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     private function validateQueries(array $modelNames, array $definitionInput): void
     {
         if (array_key_exists('queries', $definitionInput) && is_array($definitionInput['queries'])) {
-            foreach ($definitionInput['queries'] as $commandDefinition) {
-                $this->validateQueryElement($modelNames, $commandDefinition);
+            foreach ($definitionInput['queries'] as $item) {
+                if (array_key_exists('name', $item)) {
+                    $this->validateQueryElement($modelNames, $item);
+                } else {
+                    if ($this->validateSchema('Query group', 'N/A', $this->queryGroupSchemRules, $item)) {
+                        foreach ($item['children'] as $childItem) {
+                            $this->validateQueryElement($modelNames, $childItem);
+                        }
+                    }
+                }
             }
         }
     }
@@ -407,8 +480,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     private function validateEvents(array $modelNames, array $deltaNames, array $definitionInput): void
     {
         if (array_key_exists('events', $definitionInput) && is_array($definitionInput['events'])) {
-            foreach ($definitionInput['events'] as $eventDefinition) {
-                $this->validateEventElement($modelNames, $deltaNames, $eventDefinition);
+            foreach ($definitionInput['events'] as $item) {
+                if (array_key_exists('name', $item)) {
+                    $this->validateEventElement($modelNames, $deltaNames, $item);
+                } else {
+                    if ($this->validateSchema('Event group', 'N/A', $this->eventGroupSchemRules, $item)) {
+                        foreach ($item['children'] as $childItem) {
+                            $this->validateEventElement($modelNames, $deltaNames, $childItem);
+                        }
+                    }
+                }
             }
         }
     }
