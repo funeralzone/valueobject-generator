@@ -55,11 +55,43 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
         $this->validateInput($parsedDefinitionInput);
 
-        $models = $this->convertModel($rootNamespace, $parsedDefinitionInput);
-        $deltas = $this->convertDeltas($rootNamespace, $models, $parsedDefinitionInput);
-        $commands = $this->convertCommands($rootNamespace, $models, $deltas, $parsedDefinitionInput);
-        $queries = $this->convertQueries($rootNamespace, $models, $parsedDefinitionInput);
-        $events = $this->convertEvents($rootNamespace, $models, $deltas, $parsedDefinitionInput);
+        $relativeNamespace = $this->getGlobalRelativeNamespace($parsedDefinitionInput);
+
+        $models = $this->convertModel(
+            $rootNamespace,
+            $relativeNamespace,
+            $parsedDefinitionInput
+        );
+
+        $deltas = $this->convertDeltas(
+            $rootNamespace,
+            $relativeNamespace,
+            $models,
+            $parsedDefinitionInput
+        );
+
+        $commands = $this->convertCommands(
+            $rootNamespace,
+            $relativeNamespace,
+            $models,
+            $deltas,
+            $parsedDefinitionInput
+        );
+
+        $queries = $this->convertQueries(
+            $rootNamespace,
+            $relativeNamespace,
+            $models,
+            $parsedDefinitionInput
+        );
+
+        $events = $this->convertEvents(
+            $rootNamespace,
+            $relativeNamespace,
+            $models,
+            $deltas,
+            $parsedDefinitionInput
+        );
 
         return new Definition(
             $models,
@@ -79,32 +111,51 @@ final class YamlDefinitionConverter implements DefinitionConverter
         }
     }
 
-    private function convertModel(array $rootNamespace, array $parsedDefinitionInput): ModelSet
+    private function getGlobalRelativeNamespace(array $definition): array
     {
+        if (array_key_exists('namespace', $definition)) {
+            $namespace = $definition['namespace'];
+            $namespace = trim($namespace, '\\');
+            return explode('\\', $namespace);
+        } else {
+            return [];
+        }
+    }
+
+    private function convertModel(
+        array $rootNamespace,
+        array $relativeNamespace,
+        array $parsedDefinitionInput
+    ): ModelSet {
+
         $models = [];
         if (array_key_exists('model', $parsedDefinitionInput)) {
             $existingModels = [];
 
             foreach ($parsedDefinitionInput['model'] as $key => $item) {
+                $itemNamespace = $relativeNamespace;
+
                 if (array_key_exists('name', $item)) {
+                    $itemNamespace[] = 'Model';
+
                     $models[] = $this->convertModelElement(
                         $rootNamespace,
-                        [],
+                        $itemNamespace,
                         $item,
                         $existingModels
                     );
                 } else {
-                    $parentPathElements = [];
-
                     if (array_key_exists('namespace', $item)) {
                         $groupNamespace = trim($item['namespace'], '\\');
-                        $parentPathElements = explode('\\', $groupNamespace);
+                        $itemNamespace = array_merge($itemNamespace, explode('\\', $groupNamespace));
+                    } else {
+                        $itemNamespace[] = 'Model';
                     }
 
                     foreach ($item['children'] as $childItem) {
                         $models[] = $this->convertModelElement(
                             $rootNamespace,
-                            $parentPathElements,
+                            $itemNamespace,
                             $childItem,
                             $existingModels
                         );
@@ -233,18 +284,25 @@ final class YamlDefinitionConverter implements DefinitionConverter
         return new ModelProperties($properties);
     }
 
-    private function convertDeltas(array $rootNamespace, ModelSet $models, array $parsedDefinitionInput): DeltaSet
-    {
+    private function convertDeltas(
+        array $rootNamespace,
+        array $relativeNamespace,
+        ModelSet $models,
+        array $parsedDefinitionInput
+    ): DeltaSet {
+
         $deltas = [];
         if (array_key_exists('deltas', $parsedDefinitionInput)) {
             $existingDeltas = [];
             foreach ($parsedDefinitionInput['deltas'] as $item) {
-                $relativeNamespace = ['Deltas'];
+                $itemRelativeNamespace = $relativeNamespace;
 
                 if (array_key_exists('name', $item)) {
+                    $itemRelativeNamespace[] = 'Deltas';
+
                     $deltas[] = $this->convertDeltaElement(
                         $rootNamespace,
-                        $relativeNamespace,
+                        $itemRelativeNamespace,
                         $models,
                         $item,
                         $existingDeltas
@@ -252,13 +310,15 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 } else {
                     if (array_key_exists('namespace', $item)) {
                         $groupNamespace = trim($item['namespace'], '\\');
-                        $relativeNamespace = explode('\\', $groupNamespace);
+                        $itemRelativeNamespace = array_merge($itemRelativeNamespace, explode('\\', $groupNamespace));
+                    } else {
+                        $itemRelativeNamespace[] = 'Deltas';
                     }
 
                     foreach ($item['children'] as $childItem) {
                         $deltas[] = $this->convertDeltaElement(
                             $rootNamespace,
-                            $relativeNamespace,
+                            $itemRelativeNamespace,
                             $models,
                             $childItem,
                             $existingDeltas
@@ -282,7 +342,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
         $location = $deltaDefinitionInput['location'] ?? null;
 
         $payloadModels = [];
-        if (! $location && array_key_exists('payload', $deltaDefinitionInput)) {
+        if (!$location && array_key_exists('payload', $deltaDefinitionInput)) {
             foreach ($deltaDefinitionInput['payload'] as $payloadModelDefinition) {
                 $modelName = $payloadModelDefinition['name'];
                 $model = $models->getByName($modelName);
@@ -301,7 +361,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $subDeltaPayloadItems[] = new DeltaPayloadItem(
                     $existingDeltas[$subDeltaDefinition['name']],
                     $subDeltaDefinition['propertyName'],
-                    (bool) ($subDeltaDefinition['useRootData'] ?? false)
+                    (bool)($subDeltaDefinition['useRootData'] ?? false)
                 );
             }
         }
@@ -338,6 +398,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
     private function convertCommands(
         array $rootNamespace,
+        array $relativeNamespace,
         ModelSet $models,
         DeltaSet $deltas,
         array $parsedDefinitionInput
@@ -345,12 +406,14 @@ final class YamlDefinitionConverter implements DefinitionConverter
         $commands = [];
         if (array_key_exists('commands', $parsedDefinitionInput)) {
             foreach ($parsedDefinitionInput['commands'] as $item) {
-                $relativeNamespace = ['Commands'];
+                $itemRelativeNamespace = $relativeNamespace;
 
                 if (array_key_exists('name', $item)) {
+                    $itemRelativeNamespace[] = 'Commands';
+
                     $commands[] = $this->convertCommandElement(
                         $rootNamespace,
-                        $relativeNamespace,
+                        $itemRelativeNamespace,
                         $models,
                         $deltas,
                         $item
@@ -358,13 +421,15 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 } else {
                     if (array_key_exists('namespace', $item)) {
                         $groupNamespace = trim($item['namespace'], '\\');
-                        $relativeNamespace = explode('\\', $groupNamespace);
+                        $itemRelativeNamespace = array_merge($itemRelativeNamespace, explode('\\', $groupNamespace));
+                    } else {
+                        $itemRelativeNamespace[] = 'Commands';
                     }
 
                     foreach ($item['children'] as $childItem) {
                         $commands[] = $this->convertCommandElement(
                             $rootNamespace,
-                            $relativeNamespace,
+                            $itemRelativeNamespace,
                             $models,
                             $deltas,
                             $childItem
@@ -390,7 +455,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
         if (array_key_exists('payload', $commandDefinitionInput)) {
             foreach ($commandDefinitionInput['payload'] as $payloadModelDefinition) {
                 $modelName = $payloadModelDefinition['name'];
-                $required = (bool) ($payloadModelDefinition['required'] ?? false);
+                $required = (bool)($payloadModelDefinition['required'] ?? false);
                 $model = $models->getByName($modelName);
 
                 $payloadModels[] = new ModelPayloadItem(
@@ -407,7 +472,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $deltaPayloadItems[] = new DeltaPayloadItem(
                     $deltas->getByname($subDeltaDefinition['name']),
                     $subDeltaDefinition['propertyName'],
-                    (bool) ($subDeltaDefinition['useRootData'] ?? false)
+                    (bool)($subDeltaDefinition['useRootData'] ?? false)
                 );
             }
         }
@@ -430,31 +495,36 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
     private function convertQueries(
         array $rootNamespace,
+        array $relativeNamespace,
         ModelSet $models,
         array $parsedDefinitionInput
     ): QuerySet {
         $queries = [];
         if (array_key_exists('queries', $parsedDefinitionInput)) {
             foreach ($parsedDefinitionInput['queries'] as $item) {
-                $relativeNamespace = ['Queries'];
+                $itemRelativeNamespace = $relativeNamespace;
 
                 if (array_key_exists('name', $item)) {
+                    $itemRelativeNamespace[] = 'Queries';
+
                     $queries[] = $this->convertQueryElement(
                         $rootNamespace,
-                        $relativeNamespace,
+                        $itemRelativeNamespace,
                         $models,
                         $item
                     );
                 } else {
                     if (array_key_exists('namespace', $item)) {
                         $groupNamespace = trim($item['namespace'], '\\');
-                        $relativeNamespace = explode('\\', $groupNamespace);
+                        $itemRelativeNamespace = array_merge($itemRelativeNamespace, explode('\\', $groupNamespace));
+                    } else {
+                        $itemRelativeNamespace[] = 'Queries';
                     }
 
                     foreach ($item['children'] as $childItem) {
                         $queries[] = $this->convertQueryElement(
                             $rootNamespace,
-                            $relativeNamespace,
+                            $itemRelativeNamespace,
                             $models,
                             $childItem
                         );
@@ -478,7 +548,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
         if (array_key_exists('payload', $queryDefinitionInput)) {
             foreach ($queryDefinitionInput['payload'] as $payloadModelDefinition) {
                 $modelName = $payloadModelDefinition['name'];
-                $required = (bool) ($payloadModelDefinition['required'] ?? false);
+                $required = (bool)($payloadModelDefinition['required'] ?? false);
                 $model = $models->getByName($modelName);
 
                 $payloadModels[] = new ModelPayloadItem(
@@ -506,6 +576,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
     private function convertEvents(
         array $rootNamespace,
+        array $relativeNamespace,
         ModelSet $models,
         DeltaSet $deltas,
         array $parsedDefinitionInput
@@ -513,12 +584,14 @@ final class YamlDefinitionConverter implements DefinitionConverter
         $events = [];
         if (array_key_exists('events', $parsedDefinitionInput)) {
             foreach ($parsedDefinitionInput['events'] as $item) {
-                $relativeNamespace = ['Events'];
+                $itemRelativeNamespace = $relativeNamespace;
 
                 if (array_key_exists('name', $item)) {
+                    $itemRelativeNamespace[] = 'Events';
+
                     $events[] = $this->convertEventElement(
                         $rootNamespace,
-                        $relativeNamespace,
+                        $itemRelativeNamespace,
                         $models,
                         $deltas,
                         $item
@@ -526,13 +599,15 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 } else {
                     if (array_key_exists('namespace', $item)) {
                         $groupNamespace = trim($item['namespace'], '\\');
-                        $relativeNamespace = explode('\\', $groupNamespace);
+                        $itemRelativeNamespace = array_merge($itemRelativeNamespace, explode('\\', $groupNamespace));
+                    } else {
+                        $itemRelativeNamespace[] = 'Events';
                     }
 
                     foreach ($item['children'] as $childItem) {
                         $events[] = $this->convertEventElement(
                             $rootNamespace,
-                            $relativeNamespace,
+                            $itemRelativeNamespace,
                             $models,
                             $deltas,
                             $childItem
@@ -558,7 +633,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
         if (array_key_exists('payload', $eventDefinitionInput)) {
             foreach ($eventDefinitionInput['payload'] as $payloadItem) {
                 $modelName = $payloadItem['name'];
-                $required = (bool) ($payloadItem['required'] ?? false);
+                $required = (bool)($payloadItem['required'] ?? false);
                 $model = $models->getByName($modelName);
 
                 $modelPayloadItems[] = new ModelPayloadItem(
@@ -575,7 +650,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $deltaPayloadItems[] = new DeltaPayloadItem(
                     $deltas->getByname($deltaDefinition['name']),
                     $deltaDefinition['propertyName'],
-                    (bool) ($deltaDefinition['useRootData'] ?? false)
+                    (bool)($deltaDefinition['useRootData'] ?? false)
                 );
             }
         }
@@ -585,7 +660,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
             foreach ($eventDefinitionInput['meta'] as $metaItem) {
                 $modelName = $metaItem['name'];
                 $model = $models->getByName($modelName);
-                $required = (bool) ($metaItem['required'] ?? false);
+                $required = (bool)($metaItem['required'] ?? false);
 
                 $eventMetaItems[] = new EventMetaItem(
                     $model,

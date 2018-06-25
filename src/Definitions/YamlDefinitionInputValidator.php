@@ -17,7 +17,16 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     private $modelTypeDecoratorRepository;
     private $errors;
 
-    private $modelGroupSchemRules = [
+    private $rootSchemaRules = [
+        'namespace' => 'string',
+        'model' => 'array',
+        'deltas' => 'array',
+        'events' => 'array',
+        'commands' => 'array',
+        'queries' => 'array',
+    ];
+
+    private $modelGroupSchemaRules = [
         'namespace' => 'string',
         'children' => 'required|array'
     ];
@@ -37,7 +46,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'name' => 'required|string',
     ];
 
-    private $deltaGroupSchemRules = [
+    private $deltaGroupSchemaRules = [
         'namespace' => 'string',
         'children' => 'required|array'
     ];
@@ -56,7 +65,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'deltas.*.useRootData' => 'boolean',
     ];
 
-    private $commandGroupSchemRules = [
+    private $commandGroupSchemaRules = [
         'namespace' => 'string',
         'children' => 'required|array'
     ];
@@ -75,7 +84,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'deltas.*.useRootData' => 'boolean',
     ];
 
-    private $queryGroupSchemRules = [
+    private $queryGroupSchemaRules = [
         'namespace' => 'string',
         'children' => 'required|array'
     ];
@@ -88,7 +97,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'payload.*.propertyName' => 'required|string',
     ];
 
-    private $eventGroupSchemRules = [
+    private $eventGroupSchemaRules = [
         'namespace' => 'string',
         'children' => 'required|array'
     ];
@@ -126,6 +135,8 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     {
         $this->errors = [];
 
+        $this->validateSchema('Root', 'N/A', $this->rootSchemaRules, $rawDefinition);
+
         $modelNames = $this->validateModel($rawDefinition);
         $deltaNames = $this->validateDeltas($modelNames, $rawDefinition);
 
@@ -152,20 +163,13 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                         $this->validateModelElement($existingModelDefinitionNames, [], $item)
                     ));
                 } else {
-                    if ($this->validateSchema('Model group', 'N/A', $this->modelGroupSchemRules, $item)) {
-                        $parentPathElements = [];
-
-                        if (array_key_exists('namespace', $item)) {
-                            $groupNamespace = trim($item['namespace'], '\\');
-                            $parentPathElements = explode('\\', $groupNamespace);
-                        }
-
+                    if ($this->validateSchema('Model group', 'N/A', $this->modelGroupSchemaRules, $item)) {
                         foreach ($item['children'] as $childItem) {
                             $existingModelDefinitionNames = array_unique(array_merge(
                                 $existingModelDefinitionNames,
                                 $this->validateModelElement(
                                     $existingModelDefinitionNames,
-                                    $parentPathElements,
+                                    [],
                                     $childItem
                                 )
                             ));
@@ -241,7 +245,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                             }
                         } else {
                             $this->errors[] = sprintf(
-                                'Model "%s" - must define a "type"',
+                                'Model "%s" - must define a "type" or reference an existing model',
                                 $modelPath
                             );
                         }
@@ -311,7 +315,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                         $this->validateDeltaElement($modelNames, $existingDeltaDefinitionNames, $item)
                     ));
                 } else {
-                    if ($this->validateSchema('Model group', 'N/A', $this->deltaGroupSchemRules, $item)) {
+                    if ($this->validateSchema('Model group', 'N/A', $this->deltaGroupSchemaRules, $item)) {
                         foreach ($item['children'] as $childItem) {
                             $existingDeltaDefinitionNames = array_unique(array_merge(
                                 $existingDeltaDefinitionNames,
@@ -387,7 +391,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                 if (array_key_exists('name', $item)) {
                     $this->validateCommandElement($modelNames, $deltaNames, $item);
                 } else {
-                    if ($this->validateSchema('Command group', 'N/A', $this->commandGroupSchemRules, $item)) {
+                    if ($this->validateSchema('Command group', 'N/A', $this->commandGroupSchemaRules, $item)) {
                         foreach ($item['children'] as $childItem) {
                             $this->validateCommandElement($modelNames, $deltaNames, $childItem);
                         }
@@ -442,7 +446,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                 if (array_key_exists('name', $item)) {
                     $this->validateQueryElement($modelNames, $item);
                 } else {
-                    if ($this->validateSchema('Query group', 'N/A', $this->queryGroupSchemRules, $item)) {
+                    if ($this->validateSchema('Query group', 'N/A', $this->queryGroupSchemaRules, $item)) {
                         foreach ($item['children'] as $childItem) {
                             $this->validateQueryElement($modelNames, $childItem);
                         }
@@ -484,7 +488,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                 if (array_key_exists('name', $item)) {
                     $this->validateEventElement($modelNames, $deltaNames, $item);
                 } else {
-                    if ($this->validateSchema('Event group', 'N/A', $this->eventGroupSchemRules, $item)) {
+                    if ($this->validateSchema('Event group', 'N/A', $this->eventGroupSchemaRules, $item)) {
                         foreach ($item['children'] as $childItem) {
                             $this->validateEventElement($modelNames, $deltaNames, $childItem);
                         }
