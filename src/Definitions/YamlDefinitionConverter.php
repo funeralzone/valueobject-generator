@@ -155,8 +155,6 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $itemNamespace = $relativeNamespace;
 
                 if (array_key_exists('name', $item)) {
-                    $itemNamespace[] = 'Model';
-
                     $models[] = $this->convertModelElement(
                         $rootNamespace,
                         $itemNamespace,
@@ -167,8 +165,6 @@ final class YamlDefinitionConverter implements DefinitionConverter
                     if (array_key_exists('namespace', $item)) {
                         $groupNamespace = trim($item['namespace'], '\\');
                         $itemNamespace = array_merge($itemNamespace, explode('\\', $groupNamespace));
-                    } else {
-                        $itemNamespace[] = 'Model';
                     }
 
                     foreach ($item['children'] as $childItem) {
