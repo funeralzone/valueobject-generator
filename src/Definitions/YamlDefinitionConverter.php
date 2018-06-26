@@ -223,7 +223,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $referenceName = $modelNamer->makeNullableImplementationInterfaceName($modelDefinitionName);
             }
 
-            if ($external) {
+            if ($external && array_key_exists('type', $modelDefinitionInput) === false) {
                 $modelType = new NullModelType;
             } else {
                 $modelTypeKey = $modelDefinitionInput['type'];
