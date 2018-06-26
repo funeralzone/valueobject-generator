@@ -36,9 +36,12 @@ class DefaultDeltaGenerator implements DeltaGenerator
             $useStatements[] = $model->instantiationLocation()->path();
         }
 
+        $deltaNamespace = $delta->location()->namespaceAsString();
         foreach ($delta->subDeltas()->all() as $deltaPayloadItem) {
             /** @var DeltaPayloadItem $deltaPayloadItem */
-            $useStatements[] = $deltaPayloadItem->delta()->location()->path();
+            if ($deltaPayloadItem->delta()->location()->namespaceAsString() !== $deltaNamespace) {
+                $useStatements[] = $deltaPayloadItem->delta()->location()->path();
+            }
         }
 
         $source = $this->outputTemplateRenderer->render($this->templateName, [
