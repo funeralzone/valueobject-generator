@@ -322,7 +322,9 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $itemRelativeNamespace = $relativeNamespace;
 
                 if (array_key_exists('name', $item)) {
-                    $itemRelativeNamespace[] = 'Deltas';
+                    if (!array_key_exists('location', $item)) {
+                        $itemRelativeNamespace[] = 'Deltas';
+                    }
 
                     $deltas[] = $this->convertDeltaElement(
                         $rootNamespace,
