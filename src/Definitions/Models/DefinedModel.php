@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Location;
-use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecorator;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 
 final class DefinedModel implements Model
@@ -16,7 +15,9 @@ final class DefinedModel implements Model
     private $external;
     private $childModels;
     private $properties;
-    private $decorator;
+    private $nonNullDecorator;
+    private $nullDecorator;
+    private $nullableDecorator;
 
     public function __construct(
         Location $referenceLocation,
@@ -26,7 +27,9 @@ final class DefinedModel implements Model
         bool $external,
         ModelSet $childModels,
         ModelProperties $properties,
-        ModelDecorator $decorator = null
+        ModelDecorator $nonNullDecorator = null,
+        ModelDecorator $nullDecorator = null,
+        ModelDecorator $nullableDecorator = null
     ) {
         $this->referenceLocation = $referenceLocation;
         $this->instantiationLocation = $instantiationLocation;
@@ -35,7 +38,9 @@ final class DefinedModel implements Model
         $this->external = $external;
         $this->childModels = $childModels;
         $this->properties = $properties;
-        $this->decorator = $decorator;
+        $this->nonNullDecorator = $nonNullDecorator;
+        $this->nullDecorator = $nullDecorator;
+        $this->nullableDecorator = $nullableDecorator;
     }
 
     public function referenceLocation(): Location
@@ -78,8 +83,18 @@ final class DefinedModel implements Model
         return $this->properties;
     }
 
-    public function decorator(): ?ModelDecorator
+    public function nonNullDecorator(): ?ModelDecorator
     {
-        return $this->decorator;
+        return $this->nonNullDecorator;
+    }
+
+    public function nullDecorator(): ?ModelDecorator
+    {
+        return $this->nullDecorator;
+    }
+
+    public function nullableDecorator(): ?ModelDecorator
+    {
+        return $this->nullableDecorator;
     }
 }

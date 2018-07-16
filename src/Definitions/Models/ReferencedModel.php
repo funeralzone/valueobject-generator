@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Location;
-use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecorator;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 
 final class ReferencedModel implements Model
@@ -67,8 +66,18 @@ final class ReferencedModel implements Model
         return $this->properties;
     }
 
-    public function decorator(): ?ModelDecorator
+    public function nonNullDecorator(): ?ModelDecorator
     {
-        return $this->linkedModel->decorator();
+        return $this->linkedModel->nonNullDecorator();
+    }
+
+    public function nullDecorator(): ?ModelDecorator
+    {
+        return $this->linkedModel->nullDecorator();
+    }
+
+    public function nullableDecorator(): ?ModelDecorator
+    {
+        return $this->linkedModel->nullableDecorator();
     }
 }

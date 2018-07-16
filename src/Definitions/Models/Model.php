@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Location;
-use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecorator;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 
 interface Model
@@ -17,5 +16,7 @@ interface Model
     public function children(): ModelSet;
     public function creatable(): bool;
     public function properties(): ModelProperties;
-    public function decorator(): ?ModelDecorator;
+    public function nonNullDecorator(): ?ModelDecorator;
+    public function nullDecorator(): ?ModelDecorator;
+    public function nullableDecorator(): ?ModelDecorator;
 }

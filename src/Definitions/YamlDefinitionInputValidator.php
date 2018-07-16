@@ -6,7 +6,6 @@ namespace Funeralzone\ValueObjectGenerator\Definitions;
 use Exception;
 use Funeralzone\ValueObjectGenerator\Definitions\Deltas\Delta;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
-use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecoratorRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
 use Illuminate\Translation\ArrayLoader;
@@ -16,7 +15,6 @@ use Illuminate\Validation\Validator;
 final class YamlDefinitionInputValidator implements DefinitionInputValidator
 {
     private $modelTypeRepository;
-    private $modelTypeDecoratorRepository;
     private $errors;
 
     private $rootSchemaRules = [
@@ -41,7 +39,9 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'instantiationName' => 'string',
         'referenceName' => 'string',
         'namespace' => 'string',
-        'decorator' => 'string',
+        'nonNullDecorator' => 'string',
+        'nullDecorator' => 'string',
+        'nullableDecorator' => 'string',
     ];
 
     private $referencedModelSchemaRules = [
@@ -126,11 +126,9 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     ];
 
     public function __construct(
-        ModelTypeRepository $modelTypeRepository,
-        ModelDecoratorRepository $modelTypeDecoratorRepository
+        ModelTypeRepository $modelTypeRepository
     ) {
         $this->modelTypeRepository = $modelTypeRepository;
-        $this->modelTypeDecoratorRepository = $modelTypeDecoratorRepository;
     }
 
     public function validate(array $rawDefinition, Definition $baseDefinition = null): bool
@@ -258,11 +256,31 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                         }
                     }
 
-                    $decorator = $modelDefinition['decorator'] ?? null;
+                    $decorator = $modelDefinition['nonNullDecorator'] ?? null;
                     if ($decorator) {
-                        if (!$this->modelTypeDecoratorRepository->has((string)$decorator)) {
+                        if (! (class_exists($decorator) || trait_exists($decorator))) {
                             $this->errors[] = sprintf(
-                                'Model "%s" - defines a decorator ("%s") but it doesn\'t exist',
+                                'Model "%s" - defines a non-null decorator ("%s") but it doesn\'t exist',
+                                $modelPath,
+                                $decorator
+                            );
+                        }
+                    }
+                    $decorator = $modelDefinition['nullDecorator'] ?? null;
+                    if ($decorator) {
+                        if (! (class_exists($decorator) || trait_exists($decorator))) {
+                            $this->errors[] = sprintf(
+                                'Model "%s" - defines a null decorator ("%s") but it doesn\'t exist',
+                                $modelPath,
+                                $decorator
+                            );
+                        }
+                    }
+                    $decorator = $modelDefinition['nullableDecorator'] ?? null;
+                    if ($decorator) {
+                        if (! (class_exists($decorator) || trait_exists($decorator))) {
+                            $this->errors[] = sprintf(
+                                'Model "%s" - defines a nullable decorator ("%s") but it doesn\'t exist',
                                 $modelPath,
                                 $decorator
                             );

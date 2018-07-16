@@ -17,6 +17,7 @@ use Funeralzone\ValueObjectGenerator\Definitions\Events\EventSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Exceptions\InvalidDefinition;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\DefinedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelDecorator;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelPayload;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelPayloadItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelProperties;
@@ -24,7 +25,6 @@ use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Queries\Query;
 use Funeralzone\ValueObjectGenerator\Definitions\Queries\QuerySet;
-use Funeralzone\ValueObjectGenerator\Repositories\ModelDecorators\ModelDecoratorRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\NullModelType;
@@ -33,18 +33,15 @@ use Symfony\Component\Yaml\Yaml;
 final class YamlDefinitionConverter implements DefinitionConverter
 {
     private $modelTypeRepository;
-    private $modelDecoratorRepository;
     private $validator;
     private $definitionErrorRenderer;
 
     public function __construct(
         ModelTypeRepository $modelTypeRepository,
-        ModelDecoratorRepository $modelDecoratorRepository,
         DefinitionInputValidator $validator,
         DefinitionErrorRenderer $modelDefinitionErrorRenderer
     ) {
         $this->modelTypeRepository = $modelTypeRepository;
-        $this->modelDecoratorRepository = $modelDecoratorRepository;
         $this->validator = $validator;
         $this->definitionErrorRenderer = $modelDefinitionErrorRenderer;
     }
@@ -230,11 +227,26 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $modelType = $this->modelTypeRepository->get((string)$modelTypeKey);
             }
 
-            $decoratorName = $modelDefinitionInput['decorator'] ?? null;
-            if ($this->modelDecoratorRepository->has((string)$decoratorName)) {
-                $decorator = $this->modelDecoratorRepository->get((string)$decoratorName);
-            } else {
-                $decorator = null;
+            $nonNullModelDecorator = null;
+            if (array_key_exists('nonNullDecorator', $modelDefinitionInput)) {
+                $locationFactory = new LocationFactory();
+                $nonNullModelDecorator = new ModelDecorator(
+                    $locationFactory->makeFromString($modelDefinitionInput['nonNullDecorator'])
+                );
+            }
+            $nullModelDecorator = null;
+            if (array_key_exists('nullDecorator', $modelDefinitionInput)) {
+                $locationFactory = new LocationFactory();
+                $nullModelDecorator = new ModelDecorator(
+                    $locationFactory->makeFromString($modelDefinitionInput['nullDecorator'])
+                );
+            }
+            $nullableModelDecorator = null;
+            if (array_key_exists('nullableDecorator', $modelDefinitionInput)) {
+                $locationFactory = new LocationFactory();
+                $nullableModelDecorator = new ModelDecorator(
+                    $locationFactory->makeFromString($modelDefinitionInput['nullableDecorator'])
+                );
             }
 
             $childModels = [];
@@ -268,7 +280,9 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $external,
                 new ModelSet($childModels),
                 $this->distillModelPropertiesFromSchema($modelType, $modelDefinitionInput, $parentModelType),
-                $decorator
+                $nonNullModelDecorator,
+                $nullModelDecorator,
+                $nullableModelDecorator
             );
             $existingModels[$modelDefinitionName] = $model;
 
