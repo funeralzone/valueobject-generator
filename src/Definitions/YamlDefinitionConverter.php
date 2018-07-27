@@ -28,6 +28,7 @@ use Funeralzone\ValueObjectGenerator\Definitions\Queries\QuerySet;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\NullModelType;
+use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
 use Symfony\Component\Yaml\Yaml;
 
 final class YamlDefinitionConverter implements DefinitionConverter
@@ -249,6 +250,14 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 );
             }
 
+            $testStipulations = null;
+            if (array_key_exists('fromNativeValueForTests', $modelDefinitionInput)) {
+                $testStipulations = new ModelTestStipulations(
+                    $modelDefinitionInput['fromNativeValueForTests'],
+                    []
+                );
+            }
+
             $childModels = [];
             if (array_key_exists('children', $modelDefinitionInput)) {
                 $childNamespace = $parentNamespace;
@@ -282,7 +291,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $this->distillModelPropertiesFromSchema($modelType, $modelDefinitionInput, $parentModelType),
                 $nonNullModelDecorator,
                 $nullModelDecorator,
-                $nullableModelDecorator
+                $nullableModelDecorator,
+                $testStipulations
             );
             $existingModels[$modelDefinitionName] = $model;
 

@@ -42,6 +42,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'nonNullDecorator' => 'string',
         'nullDecorator' => 'string',
         'nullableDecorator' => 'string',
+        'fromNativeValueForTests' => 'string',
     ];
 
     private $referencedModelSchemaRules = [

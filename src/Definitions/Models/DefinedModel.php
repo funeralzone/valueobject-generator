@@ -5,6 +5,7 @@ namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Location;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
+use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
 
 final class DefinedModel implements Model
 {
@@ -18,6 +19,7 @@ final class DefinedModel implements Model
     private $nonNullDecorator;
     private $nullDecorator;
     private $nullableDecorator;
+    private $testStipulations;
 
     public function __construct(
         Location $referenceLocation,
@@ -29,7 +31,8 @@ final class DefinedModel implements Model
         ModelProperties $properties,
         ModelDecorator $nonNullDecorator = null,
         ModelDecorator $nullDecorator = null,
-        ModelDecorator $nullableDecorator = null
+        ModelDecorator $nullableDecorator = null,
+        ModelTestStipulations $testStipulations = null
     ) {
         $this->referenceLocation = $referenceLocation;
         $this->instantiationLocation = $instantiationLocation;
@@ -41,6 +44,7 @@ final class DefinedModel implements Model
         $this->nonNullDecorator = $nonNullDecorator;
         $this->nullDecorator = $nullDecorator;
         $this->nullableDecorator = $nullableDecorator;
+        $this->testStipulations = $testStipulations;
     }
 
     public function referenceLocation(): Location
@@ -96,5 +100,10 @@ final class DefinedModel implements Model
     public function nullableDecorator(): ?ModelDecorator
     {
         return $this->nullableDecorator;
+    }
+
+    public function testStipulations(): ?ModelTestStipulations
+    {
+        return $this->testStipulations;
     }
 }

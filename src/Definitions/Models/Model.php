@@ -5,6 +5,7 @@ namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Location;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
+use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
 
 interface Model
 {
@@ -19,4 +20,5 @@ interface Model
     public function nonNullDecorator(): ?ModelDecorator;
     public function nullDecorator(): ?ModelDecorator;
     public function nullableDecorator(): ?ModelDecorator;
+    public function testStipulations(): ?ModelTestStipulations;
 }

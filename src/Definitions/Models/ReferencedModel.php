@@ -5,6 +5,7 @@ namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Location;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
+use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
 
 final class ReferencedModel implements Model
 {
@@ -79,5 +80,10 @@ final class ReferencedModel implements Model
     public function nullableDecorator(): ?ModelDecorator
     {
         return $this->linkedModel->nullableDecorator();
+    }
+
+    public function testStipulations(): ?ModelTestStipulations
+    {
+        return $this->linkedModel->testStipulations();
     }
 }
