@@ -251,10 +251,12 @@ final class YamlDefinitionConverter implements DefinitionConverter
             }
 
             $testStipulations = null;
-            if (array_key_exists('fromNativeValueForTests', $modelDefinitionInput)) {
+            if (array_key_exists('testing', $modelDefinitionInput)) {
+                $testingDefintion = $modelDefinitionInput['testing'];
                 $testStipulations = new ModelTestStipulations(
-                    $modelDefinitionInput['fromNativeValueForTests'],
-                    []
+                    $testingDefintion['constructor'] ?? 'null',
+                    $testingDefintion['fromNative'] ?? 'null',
+                    $testingDefintion['useStatements'] ?? []
                 );
             }
 
