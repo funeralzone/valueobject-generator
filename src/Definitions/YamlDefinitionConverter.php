@@ -25,6 +25,7 @@ use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Queries\Query;
 use Funeralzone\ValueObjectGenerator\Definitions\Queries\QueryMeta;
+use Funeralzone\ValueObjectGenerator\Definitions\Queries\QueryMetaItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Queries\QuerySet;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
@@ -619,7 +620,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $model = $models->getByName($modelName);
                 $required = (bool)($metaItem['required'] ?? false);
 
-                $queryMetaItems[] = new EventMetaItem(
+                $queryMetaItems[] = new QueryMetaItem(
                     $model,
                     $metaItem['propertyName'],
                     $metaItem['key'],
