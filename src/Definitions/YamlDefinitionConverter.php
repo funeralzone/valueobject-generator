@@ -24,6 +24,7 @@ use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelProperties;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Queries\Query;
+use Funeralzone\ValueObjectGenerator\Definitions\Queries\QueryMeta;
 use Funeralzone\ValueObjectGenerator\Definitions\Queries\QuerySet;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
@@ -611,6 +612,22 @@ final class YamlDefinitionConverter implements DefinitionConverter
             }
         }
 
+        $queryMetaItems = [];
+        if (array_key_exists('meta', $queryDefinitionInput)) {
+            foreach ($queryDefinitionInput['meta'] as $metaItem) {
+                $modelName = $metaItem['name'];
+                $model = $models->getByName($modelName);
+                $required = (bool)($metaItem['required'] ?? false);
+
+                $queryMetaItems[] = new EventMetaItem(
+                    $model,
+                    $metaItem['propertyName'],
+                    $metaItem['key'],
+                    $required
+                );
+            }
+        }
+
         $delta = new Query(
             new Location(
                 $rootNamespace,
@@ -618,7 +635,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $queryDefinitionName
             ),
             $queryDefinitionName,
-            new ModelPayload($payloadModels)
+            new ModelPayload($payloadModels),
+            new QueryMeta($queryMetaItems)
         );
 
         $existingDeltas[$queryDefinitionName] = $delta;

@@ -6,6 +6,7 @@ namespace Funeralzone\ValueObjectGenerator\Output\Generators;
 use Funeralzone\ValueObjectGenerator\Conventions\ModelNamer;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelPayloadItem;
 use Funeralzone\ValueObjectGenerator\Definitions\Queries\Query;
+use Funeralzone\ValueObjectGenerator\Definitions\Queries\QueryMetaItem;
 use Funeralzone\ValueObjectGenerator\Output\OutputTemplateRenderer;
 use Funeralzone\ValueObjectGenerator\Output\OutputWriterFactory;
 
@@ -33,6 +34,18 @@ class DefaultQueryGenerator implements QueryGenerator
             /** @var ModelPayloadItem $payloadItem */
             $model = $payloadItem->model();
             if ($payloadItem->required()) {
+                $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
+                $useStatements[] = $model->instantiationLocation()->namespaceAsString() . '\\' . $nonNullModelName;
+            } else {
+                $useStatements[] = $model->instantiationLocation()->path();
+            }
+        }
+
+        foreach ($query->meta()->all() as $metaItem) {
+            /** @var QueryMetaItem $metaItem */
+            $model = $metaItem->model();
+
+            if ($metaItem->required()) {
                 $nonNullModelName = $modelNamer->makeNonNullClassName($model->definitionName());
                 $useStatements[] = $model->instantiationLocation()->namespaceAsString() . '\\' . $nonNullModelName;
             } else {

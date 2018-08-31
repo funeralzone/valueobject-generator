@@ -98,6 +98,12 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
     private $querySchemaRules = [
         'name' => 'required|string',
 
+        'meta' => 'array',
+        'meta.*.name' => 'required|string',
+        'meta.*.propertyName' => 'required|string',
+        'meta.*.key' => 'required|string',
+        'meta.*.required' => 'boolean',
+
         'payload' => 'array',
         'payload.*.name' => 'required|string',
         'payload.*.propertyName' => 'required|string',

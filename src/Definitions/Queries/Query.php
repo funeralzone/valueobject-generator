@@ -11,15 +11,18 @@ final class Query
     private $location;
     private $definitionName;
     private $payload;
+    private $meta;
 
     public function __construct(
         Location $location,
         string $definitionName,
-        ModelPayload $payload
+        ModelPayload $payload,
+        QueryMeta $meta
     ) {
         $this->location = $location;
         $this->definitionName = $definitionName;
         $this->payload = $payload;
+        $this->meta = $meta;
     }
 
     public function location(): Location
@@ -35,5 +38,10 @@ final class Query
     public function payload(): ModelPayload
     {
         return $this->payload;
+    }
+
+    public function meta(): QueryMeta
+    {
+        return $this->meta;
     }
 }
