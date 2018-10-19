@@ -8,3 +8,5 @@ src/Application/GraphQL/Schema/schemaCache\.php
 clover\.xml
 
 coverage-report/
+
+composer.lock
