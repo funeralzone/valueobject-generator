@@ -3,58 +3,44 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
-use Funeralzone\ValueObjectGenerator\Definitions\Location;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecoratorSet;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
 
 final class DefinedModel implements Model
 {
-    private $referenceLocation;
-    private $instantiationLocation;
-    private $definitionName;
     private $type;
-    private $external;
-    private $childModels;
+    private $namespace;
+    private $definitionName;
+    private $externalToDefinition;
     private $properties;
-    private $nonNullDecorator;
-    private $nullDecorator;
-    private $nullableDecorator;
+    private $decorators;
     private $testStipulations;
+    private $childModels;
 
     public function __construct(
-        Location $referenceLocation,
-        Location $instantiationLocation,
-        string $definitionName,
         ModelType $type,
-        bool $external,
-        ModelSet $childModels,
+        ModelNamespace $namespace,
+        string $definitionName,
+        bool $externalToDefinition,
         ModelProperties $properties,
-        ModelDecorator $nonNullDecorator = null,
-        ModelDecorator $nullDecorator = null,
-        ModelDecorator $nullableDecorator = null,
-        ModelTestStipulations $testStipulations = null
+        ModelDecoratorSet $decorators,
+        ModelTestStipulations $testStipulations = null,
+        ModelSet $childModels
     ) {
-        $this->referenceLocation = $referenceLocation;
-        $this->instantiationLocation = $instantiationLocation;
-        $this->definitionName = $definitionName;
         $this->type = $type;
-        $this->external = $external;
-        $this->childModels = $childModels;
+        $this->namespace = $namespace;
+        $this->definitionName = $definitionName;
+        $this->externalToDefinition = $externalToDefinition;
         $this->properties = $properties;
-        $this->nonNullDecorator = $nonNullDecorator;
-        $this->nullDecorator = $nullDecorator;
-        $this->nullableDecorator = $nullableDecorator;
+        $this->decorators = $decorators;
         $this->testStipulations = $testStipulations;
+        $this->childModels = $childModels;
     }
 
-    public function referenceLocation(): Location
+    public function namespace(): ModelNamespace
     {
-        return $this->referenceLocation;
-    }
-
-    public function instantiationLocation(): Location
-    {
-        return $this->instantiationLocation;
+        return $this->namespace;
     }
 
     public function definitionName(): string
@@ -67,39 +53,24 @@ final class DefinedModel implements Model
         return $this->type;
     }
 
-    public function external(): bool
-    {
-        return $this->external;
-    }
-
     public function children(): ModelSet
     {
         return $this->childModels;
     }
 
-    public function creatable(): bool
+    public function externalToDefinition(): bool
     {
-        return ! $this->external;
+        return ! $this->externalToDefinition;
+    }
+
+    public function decorators(): ModelDecoratorSet
+    {
+        return $this->decorators;
     }
 
     public function properties(): ModelProperties
     {
         return $this->properties;
-    }
-
-    public function nonNullDecorator(): ?ModelDecorator
-    {
-        return $this->nonNullDecorator;
-    }
-
-    public function nullDecorator(): ?ModelDecorator
-    {
-        return $this->nullDecorator;
-    }
-
-    public function nullableDecorator(): ?ModelDecorator
-    {
-        return $this->nullableDecorator;
     }
 
     public function testStipulations(): ?ModelTestStipulations

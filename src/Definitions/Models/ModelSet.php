@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
 use Countable;
-use Funeralzone\ValueObjectGenerator\Definitions\Models\Exceptions\InvalidEventPayloadItem;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Exceptions\InvalidModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Exceptions\ModelDoesNotExist;
 
 final class ModelSet implements Countable
@@ -67,7 +67,7 @@ final class ModelSet implements Countable
     {
         foreach ($models as $model) {
             if (! $model instanceof Model) {
-                throw new InvalidEventPayloadItem;
+                throw new InvalidModel;
             }
         }
     }

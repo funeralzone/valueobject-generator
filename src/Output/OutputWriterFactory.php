@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Output;
 
-use Funeralzone\ValueObjectGenerator\Definitions\Location;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelNamespace;
 
 interface OutputWriterFactory
 {
-    public function makeWriter(string $outputFolderPath, Location $location): OutputWriter;
+    public function makeWriter(string $outputFolderPath, ModelNamespace $namespace): OutputWriter;
 }
