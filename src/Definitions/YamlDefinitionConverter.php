@@ -252,7 +252,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
             switch ($rule) {
                 case self::VALID_MODEL_VALIDATION_RULE_NAME:
                     if (array_key_exists($value, $existingModels) === false) {
-                        throw new Exception(sprintf('"%s" is not a valid model', $value));
+                        throw new Exception(sprintf('model "%s" does not exist', $value));
                     }
 
                     $resolvedValue = $existingModels[$value];
