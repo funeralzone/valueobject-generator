@@ -202,6 +202,9 @@ final class YamlDefinitionConverter implements DefinitionConverter
                     $testStipulations,
                     new ModelSet($childModels)
                 );
+
+                $model = $modelType->buildModel($model);
+
                 $existingModels[$modelDefinitionName] = $model;
 
                 return $model;

@@ -22,6 +22,8 @@ interface ModelType
 
     public function generatedClassPaths(Model $model): GeneratedClassPaths;
 
+    public function buildModel(Model $model): Model;
+
     public function generate(
         OutputWriter $outputWriter,
         Model $model
