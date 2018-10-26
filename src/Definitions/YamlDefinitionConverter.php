@@ -205,7 +205,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
                 $model = $modelType->buildModel($model);
 
-                $existingModels[$modelDefinitionName] = $model;
+                $existingModels[$model->definitionName()] = $model;
 
                 return $model;
             }

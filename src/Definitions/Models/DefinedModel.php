@@ -60,7 +60,7 @@ final class DefinedModel implements Model
 
     public function externalToDefinition(): bool
     {
-        return ! $this->externalToDefinition;
+        return $this->externalToDefinition;
     }
 
     public function decorators(): ModelDecoratorSet

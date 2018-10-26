@@ -17,7 +17,7 @@ class DefaultModelGenerator implements ModelGenerator
 
     public function generate(Model $model, string $outputFolderPath)
     {
-        if ($model->externalToDefinition()) {
+        if ($model->externalToDefinition() === false) {
             $outputWriter = $this->writerFactory->makeWriter($outputFolderPath, $model->namespace());
 
             $model->type()->generate(
