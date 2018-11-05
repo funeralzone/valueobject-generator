@@ -51,6 +51,31 @@ In V1 you must explicitly define the type of model a _Set_ can contain by settin
   modelToEnforce: OrganisationalUnitId
 ```
 
+#### Decorators
+
+Decorators have had a overhaul:
+
+- you can now have multiple decorators per model
+- you do not define their target, i.e. the _nullDecorator_, _nonNUllDecorator_ and _nullableDecerator_ properties are defunct
+- they are hook based, allowing decorators to be tied into different actions within a model 
+
+Available hooks: 
+
+- **constructor** - executes during the constructor of a model and receives all arguments used to instantiate the object
+
+```yaml
+decorators:
+- path: Funeralzone\FAS\Common\ValueObjects\Decorators\DecoratorOne
+  hooks:
+  - type: constructor
+    method: methodToCallOnConstructOne
+  
+- path: Funeralzone\FAS\Common\ValueObjects\Decorators\DecoratorTwo
+  hooks:
+  - type: constructor
+    method: methodToCallOnConstructTwo
+```
+
 ## Example definition
 
 ```yaml
