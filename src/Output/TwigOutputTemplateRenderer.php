@@ -67,6 +67,21 @@ final class TwigOutputTemplateRenderer implements OutputTemplateRenderer
                 return $input;
             }
         }));
+
+        $environment->addFilter(new Twig_Filter('removeDuplicateLines', function ($input) {
+            $uniqueLines = [];
+            $uniqueLinesForComparison = [];
+            foreach (explode("\n", $input) as $line) {
+                $lineToCompare = trim($line);
+
+                if (in_array($lineToCompare, $uniqueLinesForComparison) === false) {
+                    $uniqueLines[] = $line;
+                    $uniqueLinesForComparison[] = $lineToCompare;
+                }
+            }
+
+            return implode("\n", $uniqueLines);
+        }));
     }
 
     private function buildTemplateRepository(): TemplateRepository
