@@ -3,29 +3,27 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Output;
 
-use Funeralzone\ValueObjectGenerator\Conventions\ModelNamer;
-use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
-use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
-use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
-use Funeralzone\ValueObjectGenerator\Repositories\Templates\TemplateRepository;
-use Funeralzone\ValueObjectGenerator\Repositories\Templates\TemplateRepositoryGroup;
+use Funeralzone\ValueObjectGenerator\Output\Twig\DefaultTwigEnvironmentFactory;
 use Twig_Environment;
-use Twig_Filter;
-use Twig_Function;
 
 final class TwigOutputTemplateRenderer implements OutputTemplateRenderer
 {
-    private $modelTypeRepository;
-    private $partialsTemplateRepository;
+//    private const TAB_LENGTH_IN_SPACES = 4;
+//
+//    private $templateRepository;
 
     private $twigEnvironment;
+//
+//    public function __construct(TemplateRepository $templateRepository = null)
+//    {
+//        $this->templateRepository = $templateRepository;
+//    }
 
-    public function __construct(
-        ModelTypeRepository $modelTypeRepository,
-        TemplateRepository $partialsTemplateRepository = null
-    ) {
-        $this->modelTypeRepository = $modelTypeRepository;
-        $this->partialsTemplateRepository = $partialsTemplateRepository;
+    private $twigEnvironmentFactory;
+
+    public function __construct(DefaultTwigEnvironmentFactory $twigEnvironmentFactory)
+    {
+        $this->twigEnvironmentFactory = $twigEnvironmentFactory;
     }
 
     public function render(string $templateName, array $templateVariables)
@@ -37,66 +35,122 @@ final class TwigOutputTemplateRenderer implements OutputTemplateRenderer
     private function twigEnvironment(): Twig_Environment
     {
         if (!$this->twigEnvironment) {
-            $loader = new TwigTemplateLoader($this->buildTemplateRepository());
-            $this->twigEnvironment = new Twig_Environment(
-                $loader,
-                []
-            );
-
-            $this->extendTwig($this->twigEnvironment);
+            $this->twigEnvironment = $this->twigEnvironmentFactory->make();
         }
         return $this->twigEnvironment;
     }
 
-    private function extendTwig(Twig_Environment $environment): void
-    {
-        $environment->addFilter(new Twig_Filter('ucFirst', function ($input) {
-            if (is_string($input)) {
-                return ucfirst($input);
-            } else {
-                return $input;
-            }
-        }));
+//    private function extendTwig(Twig_Environment $environment): void
+//    {
+//        $environment->addExtension(new Twig_Extension_Debug());
 
-        $environment->addFunction(new Twig_Function('makeNonNullModelName', function ($input) {
-            $modelNamer = new ModelNamer();
-            if ($input instanceof Model) {
-                /** @var Model $input */
-                return $modelNamer->makeNonNullClassName($input->definitionName());
-            } else {
-                return $input;
-            }
-        }));
+//        $environment->addFilter(new Twig_Filter('ucFirst', function ($input) {
+//            if (is_string($input)) {
+//                return ucfirst($input);
+//            } else {
+//                return $input;
+//            }
+//        }));
 
-        $environment->addFilter(new Twig_Filter('removeDuplicateLines', function ($input) {
-            $uniqueLines = [];
-            $uniqueLinesForComparison = [];
-            foreach (explode("\n", $input) as $line) {
-                $lineToCompare = trim($line);
+//        $environment->addFilter(new Twig_Filter('removeEmptyLines', function ($input) {
+//            $lines = [];
+//            foreach (explode("\n", $input) as $line) {
+//                if ($line !== '') {
+//                    $lines[] = $line;
+//                }
+//            }
+//            return implode("\n", $lines);
+//        }));
 
-                if (in_array($lineToCompare, $uniqueLinesForComparison) === false) {
-                    $uniqueLines[] = $line;
-                    $uniqueLinesForComparison[] = $lineToCompare;
-                }
-            }
+//        $environment->addFilter(new Twig_Filter('trimByLine', function ($input, string $append = '') {
+//            $trimmedLines = [];
+//            foreach (explode("\n", $input) as $line) {
+//                $trimmedLines[] = $append.trim($line);
+//            }
+//            return implode("\n", $trimmedLines);
+//        }));
 
-            return implode("\n", $uniqueLines);
-        }));
-    }
+//        $environment->addFilter(new Twig_Filter('tabInByLine', function ($input, int $depth = 1) {
+//            $lines = [];
+//            $tabRepresentation = str_repeat(' ', self::TAB_LENGTH_IN_SPACES);
+//            foreach (explode("\n", $input) as $line) {
+//                if ($line === '') {
+//                    $lines[] = $line;
+//                } else {
+//                    $lines[] = str_repeat($tabRepresentation, $depth).$line;
+//                }
+//            }
+//            return implode("\n", $lines);
+//        }));
+//
+//        $environment->addFilter(new Twig_Filter('removeIndentationByBlock', function ($input, $halt = false) {
+//            $nestedCount = 0;
+//            $characterCountToTrim = 0;
+//            $outputLines = [];
+//            foreach (explode("\n", $input) as $line) {
+//                if ($nestedCount) {
+//                    $trimmedLine = ltrim($line);
+//                    if (substr($trimmedLine, 0, 1) === '}') {
+//                        $nestedCount--;
+//                    }
+//                } else {
+//                    $lineLength = strlen($line);
+//                    for ($index = 0; $index < $lineLength; $index++) {
+//                        if ($line[$index] !== ' ') {
+//                            break;
+//                        }
+//                    }
+//                    $characterCountToTrim = $index;
+//
+//                    $trimmedLine = rtrim($line);
+//                    if (substr($trimmedLine, strlen($trimmedLine) - 1) === '{') {
+//                        $nestedCount++;
+//                    }
+//                }
+//
+//                if ($characterCountToTrim > 0) {
+//                    $textToTrim = substr($line, 0, $characterCountToTrim);
+//                    if (preg_match('/^[ ]*$/', $textToTrim)) {
+//                        $line = substr($line, $characterCountToTrim);
+//                    }
+//                }
+//
+//                $outputLines[] = $line;
+//            }
+//
+//            return implode("\n", $outputLines);
+//        }));
 
-    private function buildTemplateRepository(): TemplateRepository
-    {
-        $repositories = [];
+//        $environment->addFilter(new Twig_Filter('removeDuplicateEmptyLines', function ($input) {
+//            $lines = [];
+//            $previousLineWasBlank = false;
+//            foreach (explode("\n", $input) as $line) {
+//                if ($line === '') {
+//                    if ($previousLineWasBlank === false) {
+//                        $lines[] = $line;
+//                    }
+//                    $previousLineWasBlank = true;
+//                } else {
+//                    $lines[] = $line;
+//                    $previousLineWasBlank = false;
+//                }
+//            }
+//            return implode("\n", $lines);
+//        }));
 
-        foreach ($this->modelTypeRepository->all() as $modelType) {
-            /** @var ModelType $modelType */
-            $repositories[] = $modelType->templateRepository();
-        }
-
-        if ($this->partialsTemplateRepository) {
-            $repositories[] = $this->partialsTemplateRepository;
-        }
-
-        return new TemplateRepositoryGroup($repositories);
-    }
+//        $environment->addFilter(new Twig_Filter('prependEmptyLine', function ($input) {
+//            if ($input === '') {
+//                return $input;
+//            } else {
+//                return "\n\n".$input;
+//            }
+//        }));
+//        $environment->addFilter(new Twig_Filter('appendEmptyLine', function ($input) {
+//            if ($input === '') {
+//                return $input;
+//            } else {
+//                return $input."\n\n";
+//            }
+//        }));
+//    }
 }

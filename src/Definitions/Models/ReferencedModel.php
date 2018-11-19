@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Definitions\Models;
 
-use Funeralzone\ValueObjectGenerator\Definitions\Location;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecoratorSet;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
 
@@ -27,14 +27,9 @@ final class ReferencedModel implements Model
         ));
     }
 
-    public function referenceLocation(): Location
+    public function namespace(): ModelNamespace
     {
-        return $this->linkedModel->referenceLocation();
-    }
-
-    public function instantiationLocation(): Location
-    {
-        return $this->linkedModel->instantiationLocation();
+        return $this->linkedModel->namespace();
     }
 
     public function definitionName(): string
@@ -47,9 +42,9 @@ final class ReferencedModel implements Model
         return $this->linkedModel->type();
     }
 
-    public function external(): bool
+    public function externalToDefinition(): bool
     {
-        return $this->linkedModel->external();
+        return $this->linkedModel->externalToDefinition();
     }
 
     public function children(): ModelSet
@@ -67,19 +62,9 @@ final class ReferencedModel implements Model
         return $this->properties;
     }
 
-    public function nonNullDecorator(): ?ModelDecorator
+    public function decorators(): ModelDecoratorSet
     {
-        return $this->linkedModel->nonNullDecorator();
-    }
-
-    public function nullDecorator(): ?ModelDecorator
-    {
-        return $this->linkedModel->nullDecorator();
-    }
-
-    public function nullableDecorator(): ?ModelDecorator
-    {
-        return $this->linkedModel->nullableDecorator();
+        return $this->linkedModel->decorators();
     }
 
     public function testStipulations(): ?ModelTestStipulations
