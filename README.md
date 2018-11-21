@@ -4,19 +4,19 @@
 
 ### Everything is a model
 
-There is no longer a strong bias toward Event Sourcing so the concept of _events_, _commands_ and _deltas_ has been removed and the onus of implementing these placed on the types/template library.
+There is no longer a strong bias toward Event Sourcing so the concept of _events_, _commands_, _queries_ and _deltas_ has been removed and the onus of implementing these placed on the types/template library.
 
 The practical upshots of this change are as follows:
 
-#### _events_, _commands_ and _deltas_
+#### _events_, _commands_, _queries_ and _deltas_
 
-- Top level items for _events_, _commands_ and _deltas_ have been removed; every model lives under the _model_ top-level item
-- When creating _events_, _commands_ and _deltas_ there is no _deltas_ property; use must define _children_ models that happen to implement delta behaviour
-- _events_, _commands_ and _deltas_ are now dedicated **types** - _Event_, _Command_ and _Delta_ respectively
+- Top level items for _events_, _commands_, _queries_ and _deltas_ have been removed; every model lives under the _model_ top-level item
+- When creating _events_, _commands_, _queries_ and _deltas_ there is no _deltas_ property; use must define _children_ models that happen to implement delta behaviour
+- _events_, _commands_, _queries_ and _deltas_ are now dedicated **types** - _Event_, _Command_, _Query_ and _Delta_ respectively
 
 #### Seeding models from Prooph meta data
 
-The _Event_, _Command_ and _Delta_ **types** include a _fromMetaDataKey_ property that allows you to define a Prooph metadata key to seed from
+The _Event_, _Command_, _Query_ and _Delta_ **types** include a _fromMetaDataKey_ property that allows you to define a Prooph metadata key to seed from
 
 ```yaml
 - name: ExampleEvent
@@ -248,24 +248,24 @@ model:
   # Other
   # --------------------------
 
-#  - name: Note
-#    type: Entity
-#    children:
-#    - name: EntityId
-#      propertyName: id
-#    - name: NoteTimeCreated
-#      type: RFC3339
-#      propertyName: timeCreated
-#    - name: NoteContent
-#      type: String
-#      propertyName: content
-#    - name: NoteAuthorId
-#      type: Uuid
-#      propertyName: authorId
-#
-#  - name: Notes
-#    type: EntitySet
-#    modelToEnforce: Note
+  - name: Note
+    type: Entity
+    children:
+    - name: EntityId
+      propertyName: id
+    - name: NoteTimeCreated
+      type: RFC3339
+      propertyName: timeCreated
+    - name: NoteContent
+      type: String
+      propertyName: content
+    - name: NoteAuthorId
+      type: Uuid
+      propertyName: authorId
+
+  - name: Notes
+    type: EntitySet
+    modelToEnforce: Note
 
   - name: Name
     type: Composite
