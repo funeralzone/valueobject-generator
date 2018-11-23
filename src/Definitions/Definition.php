@@ -39,7 +39,7 @@ final class Definition
             }
 
             return new Definition(
-                new ModelSet($models)
+                new ModelSet(array_values($models))
             );
         } else {
             return $this;
