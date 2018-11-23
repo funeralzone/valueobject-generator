@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Definitions;
 
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelSet;
 
 final class Definition
@@ -28,7 +29,12 @@ final class Definition
             $models = [];
             foreach ($definitions as $definition) {
                 foreach ($definition->models->all() as $model) {
-                    $models[] = $model;
+                    /** @var Model $model */
+                    $modelName = $model->definitionName();
+
+                    if (array_key_exists($modelName, $models) === false) {
+                        $models[$modelName] = $model;
+                    }
                 }
             }
 
