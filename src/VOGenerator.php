@@ -7,18 +7,22 @@ use Funeralzone\ValueObjectGenerator\Definitions\Definition;
 use Funeralzone\ValueObjectGenerator\Middleware\DefaultMiddlewareRunner;
 use Funeralzone\ValueObjectGenerator\Middleware\MiddlewareExecutionStage;
 use Funeralzone\ValueObjectGenerator\Output\ModelGenerator;
+use Funeralzone\ValueObjectGenerator\Output\ProgressReporting\ProgressReporter;
 
 final class VOGenerator
 {
     private $modelGenerator;
     private $middlewareRunner;
+    private $progressReporter;
 
     public function __construct(
         DefaultMiddlewareRunner $middlewareRunner,
-        ModelGenerator $modelGenerator
+        ModelGenerator $modelGenerator,
+        ProgressReporter $progressReporter
     ) {
         $this->middlewareRunner = $middlewareRunner;
         $this->modelGenerator = $modelGenerator;
+        $this->progressReporter = $progressReporter;
     }
 
     public function generate(Definition $definition, string $outputFolderPath)
@@ -39,7 +43,10 @@ final class VOGenerator
 
     private function generateModel(Definition $definition, string $outputFolderPath): void
     {
-        foreach ($definition->models()->all() as $model) {
+        $models = $definition->models()->all();
+        $modelCount = count($models);
+        foreach ($models as $index => $model) {
+            $this->progressReporter->generateModelsProgress($modelCount, $index + 1);
             $this->modelGenerator->generate($model, $outputFolderPath);
         }
     }
