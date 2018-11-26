@@ -155,6 +155,9 @@ final class YamlDefinitionConverter implements DefinitionConverter
             if (array_key_exists($modelDefinitionName, $existingModels)) {
                 /** @var Model $existingModel */
                 $existingModel = $existingModels[$modelDefinitionName];
+                if ($existingModel instanceof ReferencedModel) {
+                    $existingModel = $existingModel->linkedModel();
+                }
 
                 return new ReferencedModel(
                     $existingModel,

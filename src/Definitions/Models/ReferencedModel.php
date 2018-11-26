@@ -27,6 +27,11 @@ final class ReferencedModel implements Model
         ));
     }
 
+    public function linkedModel(): Model
+    {
+        return $this->linkedModel;
+    }
+
     public function namespace(): ModelNamespace
     {
         return $this->linkedModel->namespace();
