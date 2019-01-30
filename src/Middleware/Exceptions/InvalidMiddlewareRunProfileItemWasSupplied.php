@@ -5,10 +5,10 @@ namespace Funeralzone\ValueObjectGenerator\Middleware\Exceptions;
 
 use Exception;
 
-final class InvalidMiddlewareWasSupplied extends Exception
+final class InvalidMiddlewareRunProfileItemWasSupplied extends Exception
 {
     public function __construct()
     {
-        parent::__construct('An invalid middleware was supplied');
+        parent::__construct('An invalid middleware run profile item was supplied');
     }
 }

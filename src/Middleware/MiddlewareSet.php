@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Middleware;
 
-use Funeralzone\ValueObjectGenerator\Output\Middleware\Exceptions\InvalidMiddlewareWasSupplied;
+use Funeralzone\ValueObjectGenerator\Middleware\Exceptions\InvalidMiddlewareWasSupplied;
 
 final class MiddlewareSet
 {
@@ -13,7 +13,7 @@ final class MiddlewareSet
     {
         foreach ($middleware as $item) {
             if (! $item instanceof Middleware) {
-                throw new InvalidMiddlewareWasSupplied;
+                throw new InvalidMiddlewareWasSupplied();
             }
         }
         

@@ -6,6 +6,7 @@ namespace Funeralzone\ValueObjectGenerator;
 use Funeralzone\ValueObjectGenerator\Definitions\Definition;
 use Funeralzone\ValueObjectGenerator\Middleware\DefaultMiddlewareRunner;
 use Funeralzone\ValueObjectGenerator\Middleware\MiddlewareExecutionStage;
+use Funeralzone\ValueObjectGenerator\Middleware\MiddlewareRunProfile;
 use Funeralzone\ValueObjectGenerator\Output\ModelGenerator;
 use Funeralzone\ValueObjectGenerator\Output\ProgressReporting\ProgressReporter;
 
@@ -25,16 +26,23 @@ final class VOGenerator
         $this->progressReporter = $progressReporter;
     }
 
-    public function generate(Definition $definition, string $outputFolderPath)
-    {
-        $this->runPreGenerationMiddleware($definition, $outputFolderPath);
+    public function generate(
+        MiddlewareRunProfile $middlewareRunProfile,
+        Definition $definition,
+        string $outputFolderPath
+    ): void {
+        $this->runPreGenerationMiddleware($middlewareRunProfile, $definition, $outputFolderPath);
         $this->generateModel($definition, $outputFolderPath);
-        $this->runPostGenerationMiddleware($definition, $outputFolderPath);
+        $this->runPostGenerationMiddleware($middlewareRunProfile, $definition, $outputFolderPath);
     }
 
-    private function runPreGenerationMiddleware(Definition $definition, string $outputFolderPath): void
-    {
+    private function runPreGenerationMiddleware(
+        MiddlewareRunProfile $middlewareRunProfile,
+        Definition $definition,
+        string $outputFolderPath
+    ): void {
         $this->middlewareRunner->run(
+            $middlewareRunProfile,
             MiddlewareExecutionStage::PRE_GENERATION(),
             $definition,
             $outputFolderPath
@@ -51,9 +59,13 @@ final class VOGenerator
         }
     }
 
-    private function runPostGenerationMiddleware(Definition $definition, string $outputFolderPath): void
-    {
+    private function runPostGenerationMiddleware(
+        MiddlewareRunProfile $middlewareRunProfile,
+        Definition $definition,
+        string $outputFolderPath
+    ): void {
         $this->middlewareRunner->run(
+            $middlewareRunProfile,
             MiddlewareExecutionStage::POST_GENERATION(),
             $definition,
             $outputFolderPath
