@@ -26,12 +26,8 @@ final class FormatCodeMiddleware implements Middleware
     private function getCodeFormatCommand(): string
     {
         return sprintf(
-            '%s %s/%s %s',
-            'php',
-            __DIR__,
-            '../../phars/php-cs-fixer-v2.phar',
-            'fix'
+            'php %s/../../phars/php-cs-fixer-v2.phar fix --using-cache=no',
+            __DIR__
         );
     }
 }
-
