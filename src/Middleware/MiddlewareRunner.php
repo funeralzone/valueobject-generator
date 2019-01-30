@@ -8,9 +8,9 @@ use Funeralzone\ValueObjectGenerator\Definitions\Definition;
 interface MiddlewareRunner
 {
     public function run(
-        MiddlewareRunProfile $runProfile,
         MiddlewareExecutionStage $stage,
         Definition $definition,
-        string $outputFolderPath
+        string $outputFolderPath,
+        ?MiddlewareRunProfile $runProfile
     ): void;
 }

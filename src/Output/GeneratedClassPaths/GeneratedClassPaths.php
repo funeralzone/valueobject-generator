@@ -10,15 +10,16 @@ final class GeneratedClassPaths
 {
     private $paths;
 
-    public function __construct(array $paths) {
+    public function __construct(array $paths)
+    {
         $indexedPaths = [];
         foreach ($paths as $path) {
-            if (! $path instanceof GeneratedClassPath) {
+            if (!$path instanceof GeneratedClassPath) {
                 throw new InvalidGeneratedPathWasSupplied;
             }
             $indexedPaths[$path->getType()->toNative()] = $path;
         }
-        
+
         $this->paths = $indexedPaths;
     }
 

@@ -27,25 +27,25 @@ final class VOGenerator
     }
 
     public function generate(
-        MiddlewareRunProfile $middlewareRunProfile,
         Definition $definition,
-        string $outputFolderPath
+        string $outputFolderPath,
+        ?MiddlewareRunProfile $middlewareRunProfile
     ): void {
-        $this->runPreGenerationMiddleware($middlewareRunProfile, $definition, $outputFolderPath);
+        $this->runPreGenerationMiddleware($definition, $outputFolderPath, $middlewareRunProfile);
         $this->generateModel($definition, $outputFolderPath);
-        $this->runPostGenerationMiddleware($middlewareRunProfile, $definition, $outputFolderPath);
+        $this->runPostGenerationMiddleware($definition, $outputFolderPath, $middlewareRunProfile);
     }
 
     private function runPreGenerationMiddleware(
-        MiddlewareRunProfile $middlewareRunProfile,
         Definition $definition,
-        string $outputFolderPath
+        string $outputFolderPath,
+        ?MiddlewareRunProfile $middlewareRunProfile
     ): void {
         $this->middlewareRunner->run(
-            $middlewareRunProfile,
             MiddlewareExecutionStage::PRE_GENERATION(),
             $definition,
-            $outputFolderPath
+            $outputFolderPath,
+            $middlewareRunProfile
         );
     }
 
@@ -60,15 +60,15 @@ final class VOGenerator
     }
 
     private function runPostGenerationMiddleware(
-        MiddlewareRunProfile $middlewareRunProfile,
         Definition $definition,
-        string $outputFolderPath
+        string $outputFolderPath,
+        ?MiddlewareRunProfile $middlewareRunProfile
     ): void {
         $this->middlewareRunner->run(
-            $middlewareRunProfile,
             MiddlewareExecutionStage::POST_GENERATION(),
             $definition,
-            $outputFolderPath
+            $outputFolderPath,
+            $middlewareRunProfile
         );
     }
 }

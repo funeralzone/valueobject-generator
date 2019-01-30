@@ -15,17 +15,19 @@ final class DefaultMiddlewareRunner
     }
 
     public function run(
-        MiddlewareRunProfile $runProfile,
         MiddlewareExecutionStage $stage,
         Definition $definition,
-        string $outputFolderPath
+        string $outputFolderPath,
+        ?MiddlewareRunProfile $runProfile
     ): void {
         foreach ($this->middlewareSet->all() as $middleware) {
-            if ($runProfile->shouldExecute($middleware)) {
-                /** @var Middleware $middleware */
-                if ($middleware->getExecutionStage()->getValue() == $stage->getValue()) {
-                    $middleware->run($definition, $outputFolderPath);
-                }
+            if ($runProfile !== null && $runProfile->shouldExecute($middleware) == false) {
+                continue;
+            }
+
+            /** @var Middleware $middleware */
+            if ($middleware->getExecutionStage()->getValue() == $stage->getValue()) {
+                $middleware->run($definition, $outputFolderPath);
             }
         }
 
