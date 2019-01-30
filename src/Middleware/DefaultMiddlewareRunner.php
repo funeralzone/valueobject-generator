@@ -18,7 +18,7 @@ final class DefaultMiddlewareRunner
         MiddlewareExecutionStage $stage,
         Definition $definition,
         string $outputFolderPath,
-        ?MiddlewareRunProfile $runProfile
+        ?MiddlewareRunProfile $runProfile = null
     ): void {
         foreach ($this->middlewareSet->all() as $middleware) {
             if ($runProfile !== null && $runProfile->shouldExecute($middleware) == false) {

@@ -29,7 +29,7 @@ final class VOGenerator
     public function generate(
         Definition $definition,
         string $outputFolderPath,
-        ?MiddlewareRunProfile $middlewareRunProfile
+        ?MiddlewareRunProfile $middlewareRunProfile = null
     ): void {
         $this->runPreGenerationMiddleware($definition, $outputFolderPath, $middlewareRunProfile);
         $this->generateModel($definition, $outputFolderPath);

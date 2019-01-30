@@ -11,6 +11,6 @@ interface MiddlewareRunner
         MiddlewareExecutionStage $stage,
         Definition $definition,
         string $outputFolderPath,
-        ?MiddlewareRunProfile $runProfile
+        ?MiddlewareRunProfile $runProfile = null
     ): void;
 }
