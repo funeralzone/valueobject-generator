@@ -7,6 +7,7 @@ final class MiddlewareExecutionStage
 {
     public const PRE_GENERATION = 1;
     public const POST_GENERATION = 2;
+    public const POST_MODEL_INSTANCE_GENERATION = 3;
 
     private $value;
 
@@ -23,6 +24,11 @@ final class MiddlewareExecutionStage
     public static function POST_GENERATION(): self
     {
         return new static(self::POST_GENERATION);
+    }
+
+    public static function POST_MODEL_INSTANCE_GENERATION(): self
+    {
+        return new static(self::POST_MODEL_INSTANCE_GENERATION);
     }
 
     public function getValue(): int

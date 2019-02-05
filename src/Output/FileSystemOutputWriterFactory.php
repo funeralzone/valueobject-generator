@@ -3,14 +3,21 @@ declare(strict_types=1);
 
 namespace Funeralzone\ValueObjectGenerator\Output;
 
-use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelNamespace;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Output\Exceptions\OutputLocationCouldNotBeCreated;
 
 final class FileSystemOutputWriterFactory implements OutputWriterFactory
 {
-    public function makeWriter(string $outputFolderPath, ModelNamespace $namespace): OutputWriter
+    private $modelRootFolderPathFactory;
+
+    public function __construct(ModelRootFolderPathFactory $modelRootFolderPathFactory)
     {
-        $targetFolderPath = $outputFolderPath. implode('/', $namespace->relativeNamespace()) . '/';
+        $this->modelRootFolderPathFactory = $modelRootFolderPathFactory;
+    }
+
+    public function makeWriter(string $outputFolderPath, Model $model): OutputWriter
+    {
+        $targetFolderPath = $this->modelRootFolderPathFactory->makeRootFolderPath($outputFolderPath, $model);
         $this->makeDirectory($targetFolderPath);
         return new FileSystemOutputWriter($targetFolderPath);
     }

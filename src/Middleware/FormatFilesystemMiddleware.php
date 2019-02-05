@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Middleware;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Definition;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 
 final class FormatFilesystemMiddleware implements Middleware
 {
@@ -12,7 +13,7 @@ final class FormatFilesystemMiddleware implements Middleware
         return MiddlewareExecutionStage::PRE_GENERATION();
     }
 
-    public function run(Definition $definition, string $outputFolderPath): void
+    public function run(Definition $definition, string $outputFolderPath, ?Model $model): void
     {
         $this->cleanFolder($outputFolderPath);
     }

@@ -8,6 +8,7 @@ use Funeralzone\ValueObjectGenerator\Definitions\Exceptions\DefinitionSourceDoes
 use Funeralzone\ValueObjectGenerator\Definitions\Exceptions\InvalidDefinition;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecorator;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecoratorHookSet;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecoratorHookStage;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecoratorPath;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecoratorSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\DefinedModel;
@@ -321,9 +322,19 @@ final class YamlDefinitionConverter implements DefinitionConverter
         $items = [];
         if (array_key_exists('decorators', $modelDefinitionInput)) {
             foreach ($modelDefinitionInput['decorators'] as $decorator) {
+                $hooks = $decorator['hooks'] ?? [];
+                foreach ($hooks as $hookIndex => $hook) {
+                    if (array_key_exists('stage', $hooks[$hookIndex]) === false) {
+                        $hooks[$hookIndex]['stage'] = ModelDecoratorHookStage::POST_ORIGINAL_CODE()->toNative();
+                    }
+                    if (array_key_exists('splatArguments', $hooks[$hookIndex]) === false) {
+                        $hooks[$hookIndex]['splatArguments'] = true;
+                    }
+                }
+
                 $items[] = new ModelDecorator(
                     ModelDecoratorPath::fromNative($decorator['path']),
-                    ModelDecoratorHookSet::fromNative($decorator['hooks'] ?? [])
+                    ModelDecoratorHookSet::fromNative($hooks)
                 );
             }
         }

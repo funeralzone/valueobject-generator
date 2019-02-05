@@ -4,8 +4,9 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Middleware;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Definition;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 
-final class DefaultMiddlewareRunner
+final class DefaultMiddlewareRunner implements MiddlewareRunner
 {
     private $middlewareSet;
 
@@ -18,6 +19,7 @@ final class DefaultMiddlewareRunner
         MiddlewareExecutionStage $stage,
         Definition $definition,
         string $outputFolderPath,
+        ?Model $model = null,
         ?MiddlewareRunProfile $runProfile = null
     ): void {
         foreach ($this->middlewareSet->all() as $middleware) {
@@ -27,7 +29,7 @@ final class DefaultMiddlewareRunner
 
             /** @var Middleware $middleware */
             if ($middleware->getExecutionStage()->getValue() == $stage->getValue()) {
-                $middleware->run($definition, $outputFolderPath);
+                $middleware->run($definition, $outputFolderPath, $model);
             }
         }
 

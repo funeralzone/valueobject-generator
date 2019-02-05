@@ -5,7 +5,7 @@ namespace Funeralzone\ValueObjectGenerator\Output;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 
-interface OutputWriterFactory
+interface ModelRootFolderPathFactory
 {
-    public function makeWriter(string $outputFolderPath, Model $model): OutputWriter;
+    public function makeRootFolderPath(string $outputFolderPath, Model $model): string;
 }

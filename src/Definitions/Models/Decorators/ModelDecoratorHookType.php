@@ -9,4 +9,9 @@ use Funeralzone\ValueObjects\ValueObject;
 final class ModelDecoratorHookType implements ValueObject
 {
     use StringTrait;
+
+    public function __toString(): string
+    {
+        return $this->toNative();
+    }
 }

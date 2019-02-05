@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Middleware;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Definition;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 
 final class FormatCodeMiddleware implements Middleware
 {
@@ -12,7 +13,7 @@ final class FormatCodeMiddleware implements Middleware
         return MiddlewareExecutionStage::POST_GENERATION();
     }
 
-    public function run(Definition $definition, string $outputFolderPath)
+    public function run(Definition $definition, string $outputFolderPath, ?Model $model): void
     {
         $command = sprintf(
             '%s %s',

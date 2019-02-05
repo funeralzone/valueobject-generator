@@ -32,7 +32,7 @@ final class VOGenerator
         ?MiddlewareRunProfile $middlewareRunProfile = null
     ): void {
         $this->runPreGenerationMiddleware($definition, $outputFolderPath, $middlewareRunProfile);
-        $this->generateModel($definition, $outputFolderPath);
+        $this->generateModel($definition, $outputFolderPath, $middlewareRunProfile);
         $this->runPostGenerationMiddleware($definition, $outputFolderPath, $middlewareRunProfile);
     }
 
@@ -45,17 +45,29 @@ final class VOGenerator
             MiddlewareExecutionStage::PRE_GENERATION(),
             $definition,
             $outputFolderPath,
+            null,
             $middlewareRunProfile
         );
     }
 
-    private function generateModel(Definition $definition, string $outputFolderPath): void
-    {
+    private function generateModel(
+        Definition $definition,
+        string $outputFolderPath,
+        ?MiddlewareRunProfile $middlewareRunProfile
+    ): void {
         $models = $definition->models()->all();
         $modelCount = count($models);
         foreach ($models as $index => $model) {
             $this->progressReporter->generateModelsProgress($modelCount, $index + 1);
             $this->modelGenerator->generate($model, $outputFolderPath);
+
+            $this->middlewareRunner->run(
+                MiddlewareExecutionStage::POST_MODEL_INSTANCE_GENERATION(),
+                $definition,
+                $outputFolderPath,
+                $model,
+                $middlewareRunProfile
+            );
         }
     }
 
@@ -68,6 +80,7 @@ final class VOGenerator
             MiddlewareExecutionStage::POST_GENERATION(),
             $definition,
             $outputFolderPath,
+            null,
             $middlewareRunProfile
         );
     }
