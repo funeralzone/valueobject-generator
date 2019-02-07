@@ -21,12 +21,14 @@ final class GeneratedClassPath implements ValueObject
         $this->fullyQualifiedPath = $fullyQualifiedPath;
     }
 
-    /**
-     * @return GeneratedClassType
-     */
     public function getType(): GeneratedClassType
     {
         return $this->type;
+    }
+
+    public function getFullyQualifiedPath(): GeneratedFullyQualifiedPath
+    {
+        return $this->fullyQualifiedPath;
     }
 
     public static function fromNative($native)

@@ -28,4 +28,9 @@ final class ModelDecoratorHookSet extends NonNullSet
         }
         return $matches;
     }
+
+    public function all(): array
+    {
+        return $this->toArray();
+    }
 }

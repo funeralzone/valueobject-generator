@@ -41,6 +41,8 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'decorators.*.hooks' => 'array',
         'decorators.*.hooks.*.type' => 'required|string',
         'decorators.*.hooks.*.method' => 'required|string',
+        'decorators.*.hooks.*.stage' => 'string',
+        'decorators.*.hooks.*.splatArguments' => 'bool',
 
         'testing' => 'array',
         'testing.fromNative' => 'string',

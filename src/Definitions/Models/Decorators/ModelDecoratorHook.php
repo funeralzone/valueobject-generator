@@ -12,36 +12,48 @@ class ModelDecoratorHook implements ValueObject
 
     private $type;
     private $method;
+    private $stage;
+    private $splatArguments;
 
     public function __construct(
         ModelDecoratorHookType $type,
-        ModelDecoratorHookTargetMethod $callable
+        ModelDecoratorHookTargetMethod $callable,
+        ModelDecoratorHookStage $stage,
+        ModelDecoratorHookSplatArguments $splatArguments
     ) {
         $this->type = $type;
         $this->method = $callable;
+        $this->stage = $stage;
+        $this->splatArguments = $splatArguments;
     }
 
     public static function fromNative($native)
     {
         return new ModelDecoratorHook(
-            new ModelDecoratorHookType($native['type'] ?? null),
-            new ModelDecoratorHookTargetMethod($native['method'] ?? null)
+            ModelDecoratorHookType::fromNative($native['type'] ?? null),
+            ModelDecoratorHookTargetMethod::fromNative($native['method'] ?? null),
+            ModelDecoratorHookStage::fromNative($native['stage'] ?? null),
+            ModelDecoratorHookSplatArguments::fromNative($native['splatArguments'] ?? null)
         );
     }
 
-    /**
-     * @return ModelDecoratorHookType
-     */
     public function type(): ModelDecoratorHookType
     {
         return $this->type;
     }
 
-    /**
-     * @return ModelDecoratorHookTargetMethod
-     */
     public function method(): ModelDecoratorHookTargetMethod
     {
         return $this->method;
+    }
+
+    public function getStage(): ModelDecoratorHookStage
+    {
+        return $this->stage;
+    }
+
+    public function getSplatArguments(): ModelDecoratorHookSplatArguments
+    {
+        return $this->splatArguments;
     }
 }
