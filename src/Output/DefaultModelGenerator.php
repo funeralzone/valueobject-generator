@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Output;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
 
 class DefaultModelGenerator implements ModelGenerator
 {
@@ -17,17 +18,23 @@ class DefaultModelGenerator implements ModelGenerator
 
     public function generate(Model $model, string $outputFolderPath)
     {
-        if ($model->externalToDefinition() === false) {
-            $outputWriter = $this->writerFactory->makeWriter($outputFolderPath, $model);
+        if ($model->externalToDefinition() === true) {
+            return;
+        }
 
-            $model->type()->generate(
-                $outputWriter,
-                $model
-            );
+        if ($model instanceof ReferencedModel) {
+            return;
+        }
 
-            foreach ($model->children()->all() as $childModel) {
-                $this->generate($childModel, $outputFolderPath);
-            }
+        $outputWriter = $this->writerFactory->makeWriter($outputFolderPath, $model);
+
+        $model->type()->generate(
+            $outputWriter,
+            $model
+        );
+
+        foreach ($model->children()->all() as $childModel) {
+            $this->generate($childModel, $outputFolderPath);
         }
     }
 }
