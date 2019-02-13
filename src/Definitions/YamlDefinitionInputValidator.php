@@ -34,7 +34,6 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'export' => 'boolean',
         'instantiationName' => 'string',
         'referenceName' => 'string',
-        'namespace' => 'string',
 
         'decorators' => 'array',
         'decorators.*.path' => 'required|string',
@@ -48,10 +47,6 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'testing.fromNative' => 'string',
         'testing.constructor' => 'string',
         'testing.useStatements' => 'array',
-    ];
-
-    private $referencedModelSchemaRules = [
-        'name' => 'required|string',
     ];
 
     public function __construct(
@@ -78,20 +73,32 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
 
     private function validateModel(array $definitionInput, Definition $baseDefinition = null): array
     {
+        $allModelDefinitionNames = [];
         $existingModelDefinitionNames = [];
         if ($baseDefinition) {
-            foreach ($baseDefinition->models()->allByName() as $model) {
+            foreach (array_keys($baseDefinition->modelRegister()->allByName()) as $modelDefinitionName) {
                 /** @var Model $model */
-                $existingModelDefinitionNames[] = $model->definitionName();
+                $allModelDefinitionNames[] = $modelDefinitionName;
+                $existingModelDefinitionNames[] = $modelDefinitionName;
             }
         }
 
         if (array_key_exists('model', $definitionInput) && is_array($definitionInput['model'])) {
+            $allModelDefinitionNames = array_merge(
+                $allModelDefinitionNames,
+                $this->indexAllDefinedModelNames($definitionInput['model'])
+            );
+
             foreach ($definitionInput['model'] as $key => $item) {
                 if (array_key_exists('name', $item)) {
                     $existingModelDefinitionNames = array_unique(array_merge(
                         $existingModelDefinitionNames,
-                        $this->validateModelElement($existingModelDefinitionNames, [], $item)
+                        $this->validateModelElement(
+                            $allModelDefinitionNames,
+                            $existingModelDefinitionNames,
+                            [],
+                            $item
+                        )
                     ));
                 } else {
                     if ($this->validateSchema('Model group', 'N/A', $this->modelGroupSchemaRules, $item)) {
@@ -99,6 +106,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                             $existingModelDefinitionNames = array_unique(array_merge(
                                 $existingModelDefinitionNames,
                                 $this->validateModelElement(
+                                    $allModelDefinitionNames,
                                     $existingModelDefinitionNames,
                                     [],
                                     $childItem
@@ -112,7 +120,25 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         return $existingModelDefinitionNames;
     }
 
+    private function indexAllDefinedModelNames(array $modelDefinitions): array
+    {
+        $modelDefinitionNames = [];
+        foreach ($modelDefinitions as $modelDefinition) {
+            if (array_key_exists('name', $modelDefinition) && array_key_exists('type', $modelDefinition)) {
+                $modelDefinitionNames[] = $modelDefinition['name'];
+            }
+            if (array_key_exists('children', $modelDefinition)) {
+                $modelDefinitionNames = array_merge(
+                    $modelDefinitionNames,
+                    $this->indexAllDefinedModelNames($modelDefinition['children'])
+                );
+            }
+        }
+        return $modelDefinitionNames;
+    }
+
     private function validateModelElement(
+        array $allModelDefinitionNames,
         array $existingModelDefinitionNames,
         array $parentPathElements,
         array $modelDefinition,
@@ -121,97 +147,37 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
 
         if (array_key_exists('name', $modelDefinition)) {
             $modelDefinitionName = $modelDefinition['name'];
-            $modelType = null;
 
             if (is_array($modelDefinition)) {
                 $modelPath = ltrim(implode('\\', $parentPathElements) . '\\' . $modelDefinitionName, '\\');
                 $modelHasChildren = array_key_exists('children', (array)$modelDefinition);
 
-                if (in_array($modelDefinitionName, $existingModelDefinitionNames)) {
-                    if ($modelHasChildren) {
-                        $this->errors[] = sprintf(
-                            'Model "%s" - defines children but its cannot as it references another internal model',
-                            $modelPath
-                        );
-                    }
+                $modelTypeKey = $modelDefinition['type'] ?? null;
+                $modelType = null;
+                if ($modelTypeKey !== null) {
+                    $modelType = $this->modelTypeRepository->get((string) $modelTypeKey);
+                }
 
-                    $rules = $this->referencedModelSchemaRules;
-                    if ($parentType) {
-                        $rules = array_merge($rules, $parentType->childSchemaValidationRules());
-                    }
-                    $this->validateSchema('Model', $modelPath, $rules, $modelDefinition);
-                } else {
-                    $external = array_key_exists('namespace', $modelDefinition);
+                $isModelExternal = array_key_exists('namespace', $modelDefinition);
+                $isModelDefinition = $isModelExternal === false && array_key_exists('type', $modelDefinition);
 
-                    if (!$external) {
-                        if (array_key_exists('type', $modelDefinition)) {
-                            $typeKey = $modelDefinition['type'];
-
-                            if ($this->modelTypeRepository->has($typeKey)) {
-                                $modelType = $this->modelTypeRepository->get($typeKey);
-                                if ($modelHasChildren && !$modelType->allowChildModels()) {
-                                    $this->errors[] = sprintf(
-                                        'Model "%s" - defines children but its type ("%s") does support them',
-                                        $modelPath,
-                                        $typeKey
-                                    );
-                                }
-
-                                $rules = array_merge(
-                                    $this->definedModelSchemaRules,
-                                    $modelType->ownSchemaValidationRules()
-                                );
-                                if ($parentType) {
-                                    $rules = array_merge($rules, $parentType->childSchemaValidationRules());
-                                }
-                                $this->validateSchema('Model', $modelPath, $rules, $modelDefinition);
-                            } else {
-                                $this->errors[] = sprintf(
-                                    'Model "%s" - defines an unsupported type - "%s"',
-                                    $modelPath,
-                                    $typeKey
-                                );
-                            }
-                        } else {
-                            $this->errors[] = sprintf(
-                                'Model "%s" - must define a "type" or reference an existing model',
-                                $modelPath
-                            );
-                        }
+                if ($isModelDefinition === true) {
+                    $childValidationRules = [];
+                    if ($parentType !== null) {
+                        $childValidationRules = $parentType->childSchemaValidationRules();
                     }
+                    $validationRules = array_merge(
+                        $this->definedModelSchemaRules,
+                        $childValidationRules,
+                        $modelType->ownSchemaValidationRules()
+                    );
 
-                    $decorator = $modelDefinition['nonNullDecorator'] ?? null;
-                    if ($decorator) {
-                        if (! (class_exists($decorator) || trait_exists($decorator))) {
-                            $this->errors[] = sprintf(
-                                'Model "%s" - defines a non-null decorator ("%s") but it does not exist',
-                                $modelPath,
-                                $decorator
-                            );
-                        }
-                    }
-                    $decorator = $modelDefinition['nullDecorator'] ?? null;
-                    if ($decorator) {
-                        if (! (class_exists($decorator) || trait_exists($decorator))) {
-                            $this->errors[] = sprintf(
-                                'Model "%s" - defines a null decorator ("%s") but it does not exist',
-                                $modelPath,
-                                $decorator
-                            );
-                        }
-                    }
-                    $decorator = $modelDefinition['nullableDecorator'] ?? null;
-                    if ($decorator) {
-                        if (! (class_exists($decorator) || trait_exists($decorator))) {
-                            $this->errors[] = sprintf(
-                                'Model "%s" - defines a nullable decorator ("%s") but it does not exist',
-                                $modelPath,
-                                $decorator
-                            );
-                        }
-                    }
-
-                    $existingModelDefinitionNames[] = $modelDefinitionName;
+                    $this->validateSchema(
+                        'Defined model',
+                        $modelDefinitionName,
+                        $validationRules,
+                        $modelDefinition
+                    );
                 }
 
                 if ($modelHasChildren) {
@@ -223,6 +189,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
                             $existingModelDefinitionNames = array_unique(array_merge(
                                 $existingModelDefinitionNames,
                                 $this->validateModelElement(
+                                    $allModelDefinitionNames,
                                     $existingModelDefinitionNames,
                                     $currentPathElements,
                                     $childModel,

@@ -7,6 +7,6 @@ final class ModelDoesNotExist extends \Exception
 {
     public function __construct(string $name)
     {
-        parent::__construct(sprintf('The supplied model "%s" does not exist', $name));
+        parent::__construct(sprintf('The model "%s" does not exist', $name));
     }
 }

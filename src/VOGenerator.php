@@ -59,6 +59,7 @@ final class VOGenerator
         $modelCount = count($models);
         foreach ($models as $index => $model) {
             $this->progressReporter->generateModelsProgress($modelCount, $index + 1);
+
             $this->modelGenerator->generate($model, $outputFolderPath);
 
             $this->middlewareRunner->run(
