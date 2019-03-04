@@ -9,6 +9,8 @@ use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
 
 interface Model
 {
+    public function modelRegister(): ModelRegister;
+    public function parent(): ?Model;
     public function namespace(): ModelNamespace;
     public function definitionName(): string;
     public function type(): ModelType;

@@ -9,6 +9,8 @@ use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
 
 final class DefinedModel implements Model
 {
+    private $modelRegister;
+    private $parent;
     private $type;
     private $namespace;
     private $definitionName;
@@ -19,6 +21,8 @@ final class DefinedModel implements Model
     private $childModels;
 
     public function __construct(
+        ModelRegister $modelRegister,
+        ?Model $parent,
         ModelType $type,
         ModelNamespace $namespace,
         string $definitionName,
@@ -28,6 +32,8 @@ final class DefinedModel implements Model
         ModelTestStipulations $testStipulations = null,
         ModelSet $childModels
     ) {
+        $this->modelRegister = $modelRegister;
+        $this->parent = $parent;
         $this->type = $type;
         $this->namespace = $namespace;
         $this->definitionName = $definitionName;
@@ -36,6 +42,16 @@ final class DefinedModel implements Model
         $this->decorators = $decorators;
         $this->testStipulations = $testStipulations;
         $this->childModels = $childModels;
+    }
+
+    public function modelRegister(): ModelRegister
+    {
+        return $this->modelRegister;
+    }
+
+    public function parent(): ?Model
+    {
+        return $this->parent;
     }
 
     public function namespace(): ModelNamespace

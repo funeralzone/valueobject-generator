@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions;
 
 use Exception;
-use Funeralzone\ValueObjectGenerator\Definitions\Exceptions\DefinitionSourceDoesIsInvalid;
+use Funeralzone\ValueObjectGenerator\Definitions\Exceptions\DefinitionIsInvalid;
 use Funeralzone\ValueObjectGenerator\Definitions\Exceptions\InvalidDefinition;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecorator;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecoratorHookSet;
@@ -15,6 +15,7 @@ use Funeralzone\ValueObjectGenerator\Definitions\Models\DefinedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelNamespace;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelProperties;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelRegister;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
@@ -24,8 +25,6 @@ use Symfony\Component\Yaml\Yaml;
 
 final class YamlDefinitionConverter implements DefinitionConverter
 {
-    private const VALID_MODEL_VALIDATION_RULE_NAME = 'validModel';
-
     private $modelTypeRepository;
     private $validator;
     private $definitionErrorRenderer;
@@ -48,27 +47,30 @@ final class YamlDefinitionConverter implements DefinitionConverter
         try {
             $parsedDefinitionInput = Yaml::parse($definitionInput);
         } catch (Exception $exception) {
-            throw new DefinitionSourceDoesIsInvalid($exception->getMessage());
+            throw new DefinitionIsInvalid($exception->getMessage());
         }
 
         $this->validateInput($parsedDefinitionInput, $baseDefinition);
 
         $relativeNamespace = $this->getGlobalRelativeNamespace($parsedDefinitionInput);
 
+        if ($baseDefinition === null) {
+            $modelRegister = new ModelRegister();
+            $baseModels = new ModelSet($modelRegister);
+        } else {
+            $modelRegister = $baseDefinition->modelRegister();
+            $baseModels = $baseDefinition->models();
+        }
+
         $models = $this->convertModel(
+            $modelRegister,
+            $baseModels,
             $rootNamespace,
             $relativeNamespace,
-            $parsedDefinitionInput,
-            $baseDefinition
+            $parsedDefinitionInput
         );
 
-        $definition = new Definition($models);
-
-        if ($baseDefinition) {
-            return $baseDefinition->merge($definition);
-        } else {
-            return $definition;
-        }
+        return new Definition($modelRegister, $models);
     }
 
     private function validateInput(array $modelDefinitionInput, Definition $baseDefinition = null): void
@@ -92,126 +94,161 @@ final class YamlDefinitionConverter implements DefinitionConverter
     }
 
     private function convertModel(
+        ModelRegister $modelRegister,
+        ModelSet $models,
         array $rootNamespace,
         array $relativeNamespace,
-        array $parsedDefinitionInput,
-        Definition $baseDefinition = null
+        array $definitionInput
     ): ModelSet {
 
-        $models = [];
-        $existingModels = [];
-        if ($baseDefinition) {
-            foreach ($baseDefinition->models()->allByName() as $model) {
-                /** @var Model $model */
-                $models[] = $model;
-                $existingModels[$model->definitionName()] = $model;
-            }
+        if (array_key_exists('model', $definitionInput) === false) {
+            return $models;
         }
 
-        if (array_key_exists('model', $parsedDefinitionInput)) {
-            foreach ($parsedDefinitionInput['model'] as $key => $item) {
-                $itemNamespace = $relativeNamespace;
+        $allDefinedModelNames = array_merge(
+            array_keys($modelRegister->allByName()),
+            $this->indexAllDefinedModelNamesFromDefinitionInput($definitionInput['model'])
+        );
 
-                if (array_key_exists('name', $item)) {
-                    $models[] = $this->convertModelElement(
+        foreach ($definitionInput['model'] as $key => $item) {
+            $itemNamespace = $relativeNamespace;
+
+            if (array_key_exists('name', $item)) {
+                $models->add($this->convertModelElement(
+                    $modelRegister,
+                    $models,
+                    $rootNamespace,
+                    $itemNamespace,
+                    $item,
+                    null,
+                    $allDefinedModelNames
+                ));
+            } else {
+                if (array_key_exists('namespace', $item)) {
+                    $groupNamespace = trim($item['namespace'], '\\');
+                    $itemNamespace = array_merge($itemNamespace, explode('\\', $groupNamespace));
+                }
+
+                foreach ($item['model'] as $childItem) {
+                    $models->add($this->convertModelElement(
+                        $modelRegister,
+                        $models,
                         $rootNamespace,
                         $itemNamespace,
-                        $item,
-                        $existingModels
-                    );
-                } else {
-                    if (array_key_exists('namespace', $item)) {
-                        $groupNamespace = trim($item['namespace'], '\\');
-                        $itemNamespace = array_merge($itemNamespace, explode('\\', $groupNamespace));
-                    }
-
-                    foreach ($item['model'] as $childItem) {
-                        $models[] = $this->convertModelElement(
-                            $rootNamespace,
-                            $itemNamespace,
-                            $childItem,
-                            $existingModels
-                        );
-                    }
+                        $childItem,
+                        null,
+                        $allDefinedModelNames
+                    ));
                 }
             }
         }
-        return new ModelSet($models);
+
+        return $models;
+    }
+
+    private function indexAllDefinedModelNamesFromDefinitionInput(array $modelDefinitions): array
+    {
+        $modelDefinitionNames = [];
+
+        foreach ($modelDefinitions as $modelDefinition) {
+            if (array_key_exists('name', $modelDefinition) && array_key_exists('type', $modelDefinition)) {
+                $modelDefinitionNames[] = $modelDefinition['name'];
+
+                if (array_key_exists('children', $modelDefinition)) {
+                    $modelDefinitionNames = array_merge(
+                        $modelDefinitionNames,
+                        $this->indexAllDefinedModelNamesFromDefinitionInput($modelDefinition['children'])
+                    );
+                }
+            }
+        }
+        return $modelDefinitionNames;
     }
 
     private function convertModelElement(
+        ModelRegister $modelRegister,
+        ModelSet $models,
         array $rootNamespace,
         array $parentNamespace,
-        array $modelDefinitionInput,
-        array &$existingModels,
-        ModelType $parentModelType = null
+        array $definitionInput,
+        ?Model $parent = null,
+        array $allDefinedModelNames
     ): Model {
 
-        $modelDefinitionName = $this->getModelDefinitionName($modelDefinitionInput);
+        $modelDefinitionName = $this->getModelDefinitionName($definitionInput);
 
         try {
-            $modelNamespace = $this->makeModelNamespace($modelDefinitionInput, $rootNamespace, $parentNamespace);
-            $modelIsExternalToDefinition = $modelNamespace->rootNamespace() !== $rootNamespace;
+            $modelNamespace = $this->makeModelNamespace($definitionInput, $rootNamespace, $parentNamespace);
 
-            if (array_key_exists($modelDefinitionName, $existingModels)) {
-                /** @var Model $existingModel */
-                $existingModel = $existingModels[$modelDefinitionName];
-                if ($existingModel instanceof ReferencedModel) {
-                    $existingModel = $existingModel->linkedModel();
+            $isModelExternal = $modelNamespace->rootNamespace() !== $rootNamespace;
+            $isModelDefinition = $isModelExternal === true || array_key_exists('type', $definitionInput);
+            $isModelValidReference = (
+                $isModelDefinition === false &&
+                in_array($modelDefinitionName, $allDefinedModelNames) === true
+            );
+
+            if ($isModelDefinition === false) {
+                if ($isModelValidReference === false) {
+                    $message = sprintf(
+                        '"%s" cannot be converted - it references a non-existent Model',
+                        $modelDefinitionName
+                    );
+                    throw new DefinitionIsInvalid($message);
                 }
 
                 return new ReferencedModel(
-                    $existingModel,
+                    $modelRegister,
+                    $parent,
                     $modelDefinitionName,
-                    $this->distillModelPropertiesFromSchema(
-                        $existingModel->type(),
-                        $modelDefinitionInput,
-                        $parentModelType,
-                        $existingModels
-                    )
+                    new ModelProperties($definitionInput)
                 );
             } else {
-                $modelType = $this->getModelType($modelDefinitionInput);
-                $modelDecorators = $this->makeModelDecorators($modelDefinitionInput);
-                $testStipulations = $this->makeModelTestStipulations($modelDefinitionInput);
-                $modelProperties = $this->distillModelPropertiesFromSchema(
-                    $modelType,
-                    $modelDefinitionInput,
-                    $parentModelType,
-                    $existingModels
-                );
+                $modelType = $this->getModelType($definitionInput);
+                $modelDecorators = $this->makeModelDecorators($definitionInput);
+                $testStipulations = $this->makeModelTestStipulations($definitionInput);
 
-                $childModels = [];
-                if (array_key_exists('children', $modelDefinitionInput)) {
-                    $childNamespace = $parentNamespace;
-                    $childNamespace[] = $modelDefinitionName;
-                    foreach ($modelDefinitionInput['children'] as $childModelDefinition) {
-                        $childModels[] = $this->convertModelElement(
-                            $rootNamespace,
-                            $modelNamespace->relativeNamespace(),
-                            $childModelDefinition,
-                            $existingModels,
-                            $modelType
-                        );
-                    }
+                $parentType = null;
+                if ($parent !== null) {
+                    $parentType = $parent->type();
                 }
 
+                $modelProperties = $this->distillModelPropertiesFromSchema(
+                    $modelType,
+                    $definitionInput,
+                    $parentType
+                );
+
+                $modelChildren = new ModelSet($modelRegister);
                 $model = new DefinedModel(
+                    $modelRegister,
+                    $parent,
                     $modelType,
                     $modelNamespace,
                     $modelDefinitionName,
-                    $modelIsExternalToDefinition,
+                    $isModelExternal,
                     $modelProperties,
                     $modelDecorators,
                     $testStipulations,
-                    new ModelSet($childModels)
+                    $modelChildren
                 );
 
-                $model = $modelType->buildModel($model);
+                if (array_key_exists('children', $definitionInput)) {
+                    $childNamespace = $parentNamespace;
+                    $childNamespace[] = $modelDefinitionName;
+                    foreach ($definitionInput['children'] as $childModelDefinition) {
+                        $modelChildren->add($this->convertModelElement(
+                            $modelRegister,
+                            $models,
+                            $rootNamespace,
+                            $modelNamespace->relativeNamespace(),
+                            $childModelDefinition,
+                            $model,
+                            $allDefinedModelNames
+                        ));
+                    }
+                }
 
-                $existingModels[$model->definitionName()] = $model;
-
-                return $model;
+                return $model->type()->buildModel($model);
             }
         } catch (Exception $exception) {
             $message = sprintf(
@@ -219,15 +256,14 @@ final class YamlDefinitionConverter implements DefinitionConverter
                 $modelDefinitionName,
                 $exception->getMessage()
             );
-            throw new DefinitionSourceDoesIsInvalid($message);
+            throw new DefinitionIsInvalid($message);
         }
     }
 
     private function distillModelPropertiesFromSchema(
         ModelType $modelType,
         array $modelDefinition,
-        ModelType $parentModelType = null,
-        array &$existingModels
+        ModelType $parentModelType = null
     ): ModelProperties {
         $schemaValidationRules = $modelType->ownSchemaValidationRules();
         if ($parentModelType) {
@@ -241,7 +277,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
         foreach ($schemaValidationRules as $key => $rules) {
             try {
                 if (array_key_exists($key, $modelDefinition)) {
-                    $properties[$key] = $this->resolvePropertyValue($rules, $modelDefinition[$key], $existingModels);
+                    $properties[$key] = $modelDefinition[$key];
                 }
             } catch (Exception $exception) {
                 throw new Exception(sprintf('"%s" property is invalid - %s', $key, $exception->getMessage()));
@@ -250,27 +286,6 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
         return new ModelProperties($properties);
     }
-
-    private function resolvePropertyValue(string $schemaValidationRules, $value, array &$existingModels)
-    {
-        $resolvedValue = $value;
-
-        foreach (explode('|', $schemaValidationRules) as $rule) {
-            switch ($rule) {
-                case self::VALID_MODEL_VALIDATION_RULE_NAME:
-                    if (array_key_exists($value, $existingModels) === false) {
-                        throw new Exception(sprintf('model "%s" does not exist', $value));
-                    }
-
-                    $resolvedValue = $existingModels[$value];
-
-                    break;
-            }
-        }
-
-        return $resolvedValue;
-    }
-
 
     private function getModelDefinitionName(array $modelDefinitionInput): string
     {

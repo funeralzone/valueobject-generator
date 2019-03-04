@@ -9,32 +9,41 @@ use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
 
 final class ReferencedModel implements Model
 {
-    private $linkedModel;
+    private $modelRegister;
+    private $parent;
     private $definitionName;
     private $properties;
 
     public function __construct(
-        Model $linkedModel,
+        ModelRegister $modelRegister,
+        ?Model $parent,
         string $definitionName,
         ModelProperties $properties
     ) {
-        $this->linkedModel = $linkedModel;
+        $this->modelRegister = $modelRegister;
+        $this->parent = $parent;
         $this->definitionName = $definitionName;
+        $this->properties = $properties;
+    }
 
-        $this->properties = new ModelProperties(array_merge(
-            $linkedModel->properties()->all(),
-            $properties->all()
-        ));
+    public function modelRegister(): ModelRegister
+    {
+        return $this->modelRegister;
+    }
+
+    public function parent(): ?Model
+    {
+        return $this->parent();
     }
 
     public function linkedModel(): Model
     {
-        return $this->linkedModel;
+        return $this->modelRegister->get($this->definitionName);
     }
 
     public function namespace(): ModelNamespace
     {
-        return $this->linkedModel->namespace();
+        return $this->linkedModel()->namespace();
     }
 
     public function definitionName(): string
@@ -44,17 +53,17 @@ final class ReferencedModel implements Model
 
     public function type(): ModelType
     {
-        return $this->linkedModel->type();
+        return $this->linkedModel()->type();
     }
 
     public function externalToDefinition(): bool
     {
-        return $this->linkedModel->externalToDefinition();
+        return $this->linkedModel()->externalToDefinition();
     }
 
     public function children(): ModelSet
     {
-        return $this->linkedModel->children();
+        return $this->linkedModel()->children();
     }
 
     public function creatable(): bool
@@ -64,16 +73,19 @@ final class ReferencedModel implements Model
 
     public function properties(): ModelProperties
     {
-        return $this->properties;
+        return new ModelProperties(array_merge(
+            $this->linkedModel()->properties()->all(),
+            $this->properties->all()
+        ));
     }
 
     public function decorators(): ModelDecoratorSet
     {
-        return $this->linkedModel->decorators();
+        return $this->linkedModel()->decorators();
     }
 
     public function testStipulations(): ?ModelTestStipulations
     {
-        return $this->linkedModel->testStipulations();
+        return $this->linkedModel()->testStipulations();
     }
 }
