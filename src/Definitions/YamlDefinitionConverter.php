@@ -13,6 +13,8 @@ use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecorato
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Decorators\ModelDecoratorSet;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\DefinedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelInterface;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelInterfaces;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelNamespace;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelProperties;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\ModelRegister;
@@ -205,6 +207,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
             } else {
                 $modelType = $this->getModelType($definitionInput);
                 $modelDecorators = $this->makeModelDecorators($definitionInput);
+                $modelInterfaces = $this->makeModelInterfaces($definitionInput);
                 $testStipulations = $this->makeModelTestStipulations($definitionInput);
 
                 $parentType = null;
@@ -228,6 +231,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
                     $isModelExternal,
                     $modelProperties,
                     $modelDecorators,
+                    $modelInterfaces,
                     $testStipulations,
                     $modelChildren
                 );
@@ -354,5 +358,14 @@ final class YamlDefinitionConverter implements DefinitionConverter
             }
         }
         return new ModelDecoratorSet($items);
+    }
+
+    private function makeModelInterfaces(array $modelDefinitionInput): ModelInterfaces
+    {
+        $interfaces = [];
+        foreach (($modelDefinitionInput['interfaces'] ?? []) as $nativeInterface) {
+            $interfaces[] = new ModelInterface($nativeInterface);
+        }
+        return new ModelInterfaces($interfaces);
     }
 }

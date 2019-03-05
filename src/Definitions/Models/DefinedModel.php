@@ -17,6 +17,7 @@ final class DefinedModel implements Model
     private $externalToDefinition;
     private $properties;
     private $decorators;
+    private $implementsInterfaces;
     private $testStipulations;
     private $childModels;
 
@@ -29,6 +30,7 @@ final class DefinedModel implements Model
         bool $externalToDefinition,
         ModelProperties $properties,
         ModelDecoratorSet $decorators,
+        ModelInterfaces $implementsInterfaces,
         ModelTestStipulations $testStipulations = null,
         ModelSet $childModels
     ) {
@@ -40,6 +42,7 @@ final class DefinedModel implements Model
         $this->externalToDefinition = $externalToDefinition;
         $this->properties = $properties;
         $this->decorators = $decorators;
+        $this->implementsInterfaces = $implementsInterfaces;
         $this->testStipulations = $testStipulations;
         $this->childModels = $childModels;
     }
@@ -92,5 +95,10 @@ final class DefinedModel implements Model
     public function testStipulations(): ?ModelTestStipulations
     {
         return $this->testStipulations;
+    }
+
+    public function interfaces(): ModelInterfaces
+    {
+        return $this->implementsInterfaces;
     }
 }

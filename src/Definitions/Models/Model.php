@@ -18,5 +18,6 @@ interface Model
     public function externalToDefinition(): bool;
     public function properties(): ModelProperties;
     public function decorators(): ModelDecoratorSet;
+    public function interfaces(): ModelInterfaces;
     public function testStipulations(): ?ModelTestStipulations;
 }

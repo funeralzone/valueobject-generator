@@ -88,4 +88,9 @@ final class ReferencedModel implements Model
     {
         return $this->linkedModel()->testStipulations();
     }
+
+    public function interfaces(): ModelInterfaces
+    {
+        return $this->linkedModel()->interfaces();
+    }
 }
