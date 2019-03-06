@@ -34,6 +34,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         'export' => 'boolean',
         'instantiationName' => 'string',
         'referenceName' => 'string',
+        'interfaces' => 'array',
 
         'decorators' => 'array',
         'decorators.*.path' => 'required|string',
