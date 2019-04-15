@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Definition;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\DefinedModel;
 use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Middleware\DefaultMiddlewareRunner;
 use Funeralzone\ValueObjectGenerator\Middleware\MiddlewareExecutionStage;
@@ -79,6 +80,10 @@ final class VOGenerator
         Model $model,
         ?MiddlewareRunProfile $middlewareRunProfile
     ): void {
+
+        if (! $model instanceof DefinedModel) {
+            return;
+        }
 
         $this->middlewareRunner->run(
             MiddlewareExecutionStage::POST_MODEL_INSTANCE_GENERATION(),
