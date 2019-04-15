@@ -64,23 +64,37 @@ final class VOGenerator
 
             $this->modelGenerator->generate($model, $outputFolderPath);
 
-            $this->middlewareRunner->run(
-                MiddlewareExecutionStage::POST_MODEL_INSTANCE_GENERATION(),
+            $this->applyPostModelGenerationMiddleware(
                 $definition,
                 $outputFolderPath,
                 $model,
                 $middlewareRunProfile
             );
+        }
+    }
 
-            foreach ($model->children()->all() as $childModel) {
-                $this->middlewareRunner->run(
-                    MiddlewareExecutionStage::POST_MODEL_INSTANCE_GENERATION(),
-                    $definition,
-                    $outputFolderPath,
-                    $childModel,
-                    $middlewareRunProfile
-                );
-            }
+    private function applyPostModelGenerationMiddleware(
+        Definition $definition,
+        string $outputFolderPath,
+        Model $model,
+        ?MiddlewareRunProfile $middlewareRunProfile
+    ): void {
+
+        $this->middlewareRunner->run(
+            MiddlewareExecutionStage::POST_MODEL_INSTANCE_GENERATION(),
+            $definition,
+            $outputFolderPath,
+            $model,
+            $middlewareRunProfile
+        );
+
+        foreach ($model->children()->all() as $childModel) {
+            $this->applyPostModelGenerationMiddleware(
+                $definition,
+                $outputFolderPath,
+                $childModel,
+                $middlewareRunProfile
+            );
         }
     }
 
