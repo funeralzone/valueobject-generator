@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator;
 
 use Funeralzone\ValueObjectGenerator\Definitions\Definition;
+use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Middleware\DefaultMiddlewareRunner;
 use Funeralzone\ValueObjectGenerator\Middleware\MiddlewareExecutionStage;
 use Funeralzone\ValueObjectGenerator\Middleware\MiddlewareRunProfile;
@@ -58,6 +59,7 @@ final class VOGenerator
         $models = $definition->models()->all();
         $modelCount = count($models);
         foreach ($models as $index => $model) {
+            /** @var Model $model */
             $this->progressReporter->generateModelsProgress($modelCount, $index + 1);
 
             $this->modelGenerator->generate($model, $outputFolderPath);
@@ -69,6 +71,16 @@ final class VOGenerator
                 $model,
                 $middlewareRunProfile
             );
+
+            foreach ($model->children()->all() as $childModel) {
+                $this->middlewareRunner->run(
+                    MiddlewareExecutionStage::POST_MODEL_INSTANCE_GENERATION(),
+                    $definition,
+                    $outputFolderPath,
+                    $childModel,
+                    $middlewareRunProfile
+                );
+            }
         }
     }
 
