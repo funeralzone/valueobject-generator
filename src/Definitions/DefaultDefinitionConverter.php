@@ -23,9 +23,8 @@ use Funeralzone\ValueObjectGenerator\Definitions\Models\ReferencedModel;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
 use Funeralzone\ValueObjectGenerator\Testing\ModelTestStipulations;
-use Symfony\Component\Yaml\Yaml;
 
-final class YamlDefinitionConverter implements DefinitionConverter
+final class DefaultDefinitionConverter implements DefinitionConverter
 {
     private $modelTypeRepository;
     private $validator;
@@ -33,7 +32,7 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
     public function __construct(
         ModelTypeRepository $modelTypeRepository,
-        DefinitionInputValidator $validator,
+        NativeDefinitionValidator $validator,
         DefinitionErrorRenderer $modelDefinitionErrorRenderer
     ) {
         $this->modelTypeRepository = $modelTypeRepository;
@@ -43,56 +42,43 @@ final class YamlDefinitionConverter implements DefinitionConverter
 
     public function convert(
         array $rootNamespace,
-        string $definitionInput,
-        Definition $baseDefinition = null
+        NativeDefinition $nativeDefinition
     ): Definition {
-        try {
-            $parsedDefinitionInput = Yaml::parse($definitionInput);
-        } catch (Exception $exception) {
-            throw new DefinitionIsInvalid($exception->getMessage());
-        }
+        $this->validateInput($nativeDefinition);
 
-        $this->validateInput($parsedDefinitionInput, $baseDefinition);
+        $relativeNamespace = $this->getGlobalRelativeNamespace($nativeDefinition);
 
-        $relativeNamespace = $this->getGlobalRelativeNamespace($parsedDefinitionInput);
-
-        if ($baseDefinition === null) {
-            $modelRegister = new ModelRegister();
-            $baseModels = new ModelSet($modelRegister);
-        } else {
-            $modelRegister = $baseDefinition->modelRegister();
-            $baseModels = $baseDefinition->models();
-        }
+        $modelRegister = new ModelRegister();
+        $baseModels = new ModelSet($modelRegister);
 
         $models = $this->convertModel(
             $modelRegister,
             $baseModels,
             $rootNamespace,
             $relativeNamespace,
-            $parsedDefinitionInput
+            $nativeDefinition
         );
 
         return new Definition($modelRegister, $models);
     }
 
-    private function validateInput(array $modelDefinitionInput, Definition $baseDefinition = null): void
+    private function validateInput(NativeDefinition $nativeDefinition): void
     {
-        if (!$this->validator->validate($modelDefinitionInput, $baseDefinition)) {
+        if (!$this->validator->validate($nativeDefinition)) {
             $this->definitionErrorRenderer->render($this->validator->errors());
 
             throw new InvalidDefinition;
         }
     }
 
-    private function getGlobalRelativeNamespace(array $definition): array
+    private function getGlobalRelativeNamespace(NativeDefinition $nativeDefinition): array
     {
-        if (array_key_exists('namespace', $definition)) {
-            $namespace = $definition['namespace'];
-            $namespace = trim($namespace, '\\');
-            return explode('\\', $namespace);
-        } else {
-            return [];
-        }
+        $namespace = $nativeDefinition->getNamespace();
+        $namespace = trim($namespace, '\\');
+
+        $namespaceElements = explode('\\', $namespace);
+
+        return array_filter($namespaceElements);
     }
 
     private function convertModel(
@@ -100,19 +86,19 @@ final class YamlDefinitionConverter implements DefinitionConverter
         ModelSet $models,
         array $rootNamespace,
         array $relativeNamespace,
-        array $definitionInput
+        NativeDefinition $nativeDefinition
     ): ModelSet {
 
-        if (array_key_exists('model', $definitionInput) === false) {
+        if (count($nativeDefinition->getModel()) === 0) {
             return $models;
         }
 
         $allDefinedModelNames = array_merge(
             array_keys($modelRegister->allByName()),
-            $this->indexAllDefinedModelNamesFromDefinitionInput($definitionInput['model'])
+            $this->indexAllDefinedModelNamesFromDefinitionInput($nativeDefinition->getModel())
         );
 
-        foreach ($definitionInput['model'] as $key => $item) {
+        foreach ($nativeDefinition->getModel() as $key => $item) {
             $itemNamespace = $relativeNamespace;
 
             if (array_key_exists('name', $item)) {
@@ -122,24 +108,26 @@ final class YamlDefinitionConverter implements DefinitionConverter
                     $rootNamespace,
                     $itemNamespace,
                     $item,
-                    null,
-                    $allDefinedModelNames
+                    $allDefinedModelNames,
+                    null
                 ));
             } else {
-                if (array_key_exists('namespace', $item)) {
+                if (array_key_exists('namespace', $item) && $item['namespace'] !== '') {
                     $groupNamespace = trim($item['namespace'], '\\');
                     $itemNamespace = array_merge($itemNamespace, explode('\\', $groupNamespace));
+
+                    $itemNamespace = array_filter($itemNamespace);
                 }
 
-                foreach ($item['model'] as $childItem) {
+                foreach (($item['model'] ?? []) as $childItem) {
                     $models->add($this->convertModelElement(
                         $modelRegister,
                         $models,
                         $rootNamespace,
                         $itemNamespace,
                         $childItem,
-                        null,
-                        $allDefinedModelNames
+                        $allDefinedModelNames,
+                        null
                     ));
                 }
             }
@@ -162,8 +150,14 @@ final class YamlDefinitionConverter implements DefinitionConverter
                         $this->indexAllDefinedModelNamesFromDefinitionInput($modelDefinition['children'])
                     );
                 }
+            } elseif (array_key_exists('model', $modelDefinition)) {
+                $modelDefinitionNames = array_merge(
+                    $modelDefinitionNames,
+                    $this->indexAllDefinedModelNamesFromDefinitionInput($modelDefinition['model'])
+                );
             }
         }
+
         return $modelDefinitionNames;
     }
 
@@ -173,8 +167,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
         array $rootNamespace,
         array $parentNamespace,
         array $definitionInput,
-        ?Model $parent = null,
-        array $allDefinedModelNames
+        array $allDefinedModelNames,
+        ?Model $parent = null
     ): Model {
 
         $modelDefinitionName = $this->getModelDefinitionName($definitionInput);
@@ -246,8 +240,8 @@ final class YamlDefinitionConverter implements DefinitionConverter
                             $rootNamespace,
                             $modelNamespace->relativeNamespace(),
                             $childModelDefinition,
-                            $model,
-                            $allDefinedModelNames
+                            $allDefinedModelNames,
+                            $model
                         ));
                     }
                 }

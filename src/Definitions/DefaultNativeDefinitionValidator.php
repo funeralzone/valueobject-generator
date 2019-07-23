@@ -4,14 +4,13 @@ declare(strict_types=1);
 namespace Funeralzone\ValueObjectGenerator\Definitions;
 
 use Exception;
-use Funeralzone\ValueObjectGenerator\Definitions\Models\Model;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelType;
 use Funeralzone\ValueObjectGenerator\Repositories\ModelTypes\ModelTypeRepository;
 use Illuminate\Translation\ArrayLoader;
 use Illuminate\Translation\Translator;
 use Illuminate\Validation\Validator;
 
-final class YamlDefinitionInputValidator implements DefinitionInputValidator
+final class DefaultNativeDefinitionValidator implements NativeDefinitionValidator
 {
     private $modelTypeRepository;
     private $errors;
@@ -56,13 +55,13 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         $this->modelTypeRepository = $modelTypeRepository;
     }
 
-    public function validate(array $rawDefinition, Definition $baseDefinition = null): bool
+    public function validate(NativeDefinition $nativeDefinition): bool
     {
         $this->errors = [];
 
-        $this->validateSchema('Root', 'N/A', $this->rootSchemaRules, $rawDefinition);
+        $this->validateSchema('Root', 'N/A', $this->rootSchemaRules, $nativeDefinition->toArray());
 
-        $this->validateModel($rawDefinition, $baseDefinition);
+        $this->validateModel($nativeDefinition->toArray());
 
         return count($this->errors) == 0;
     }
@@ -72,17 +71,10 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
         return $this->errors;
     }
 
-    private function validateModel(array $definitionInput, Definition $baseDefinition = null): array
+    private function validateModel(array $definitionInput): array
     {
         $allModelDefinitionNames = [];
         $existingModelDefinitionNames = [];
-        if ($baseDefinition) {
-            foreach (array_keys($baseDefinition->modelRegister()->allByName()) as $modelDefinitionName) {
-                /** @var Model $model */
-                $allModelDefinitionNames[] = $modelDefinitionName;
-                $existingModelDefinitionNames[] = $modelDefinitionName;
-            }
-        }
 
         if (array_key_exists('model', $definitionInput) && is_array($definitionInput['model'])) {
             $allModelDefinitionNames = array_merge(
@@ -213,7 +205,7 @@ final class YamlDefinitionInputValidator implements DefinitionInputValidator
             }
         } else {
             $this->errors[] = sprintf(
-                'All items must define a "name"',
+                'Model %s"" - All items must define a "name"',
                 implode('\\', $parentPathElements)
             );
         }
