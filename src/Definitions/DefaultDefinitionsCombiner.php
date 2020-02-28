@@ -17,14 +17,13 @@ class DefaultDefinitionsCombiner implements DefinitionsCombiner
         /** @var NativeDefinition $nativeDefinition */
         foreach ($nativeDefinitions->all() as $nativeDefinition) {
             try {
-                $definitionNamespace = $nativeDefinition->getNamespace();
-
                 if (count($nativeDefinition->getModel()) === 0) {
                     continue;
                 }
 
                 $combinedModel[] = [
-                    'namespace' => $definitionNamespace,
+                    'rootNamespace' => $nativeDefinition->getRootNamespace(),
+                    'namespace' => $nativeDefinition->getNamespace(),
                     'model' => $nativeDefinition->getModel(),
                 ];
             } catch (Exception $exception) {
@@ -33,7 +32,7 @@ class DefaultDefinitionsCombiner implements DefinitionsCombiner
         }
 
         return new NativeDefinition([
-           'model' => $combinedModel,
+            'model' => $combinedModel,
         ]);
     }
 }

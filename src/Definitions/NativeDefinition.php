@@ -17,6 +17,11 @@ final class NativeDefinition
         return $this->definition['model'] ?? [];
     }
 
+    public function getRootNamespace(): string
+    {
+        return $this->definition['rootNamespace'] ?? '';
+    }
+
     public function getNamespace(): string
     {
         return $this->definition['namespace'] ?? '';

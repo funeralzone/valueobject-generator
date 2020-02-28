@@ -6,7 +6,7 @@ namespace Funeralzone\ValueObjectGenerator\Definitions;
 interface DefinitionConverter
 {
     public function convert(
-        array $rootNamespace,
+        array $defaultRootNamespace,
         NativeDefinition $nativeDefinition
     ): Definition;
 }
