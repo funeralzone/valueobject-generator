@@ -41,11 +41,12 @@ final class DefaultDefinitionConverter implements DefinitionConverter
     }
 
     public function convert(
-        array $rootNamespace,
+        array $defaultRootNamespace,
         NativeDefinition $nativeDefinition
     ): Definition {
         $this->validateInput($nativeDefinition);
 
+        $rootNamespace = $this->getGlobalRootNamespace($nativeDefinition, $defaultRootNamespace);
         $relativeNamespace = $this->getGlobalRelativeNamespace($nativeDefinition);
 
         $modelRegister = new ModelRegister();
@@ -69,6 +70,23 @@ final class DefaultDefinitionConverter implements DefinitionConverter
 
             throw new InvalidDefinition;
         }
+    }
+
+    private function getGlobalRootNamespace(
+        NativeDefinition $nativeDefinition,
+        array $defaultRootNamespace
+    ): array {
+        $namespace = $nativeDefinition->getRootNamespace();
+
+        if ($namespace === '') {
+            return $defaultRootNamespace;
+        }
+
+        $namespace = trim($namespace, '\\');
+
+        $namespaceElements = explode('\\', $namespace);
+
+        return array_filter($namespaceElements);
     }
 
     private function getGlobalRelativeNamespace(NativeDefinition $nativeDefinition): array
@@ -98,7 +116,7 @@ final class DefaultDefinitionConverter implements DefinitionConverter
             $this->indexAllDefinedModelNamesFromDefinitionInput($nativeDefinition->getModel())
         );
 
-        foreach ($nativeDefinition->getModel() as $key => $item) {
+        foreach ($nativeDefinition->getModel() as $item) {
             $itemNamespace = $relativeNamespace;
 
             if (array_key_exists('name', $item)) {
@@ -112,6 +130,14 @@ final class DefaultDefinitionConverter implements DefinitionConverter
                     null
                 ));
             } else {
+                $rootNamespaceForItem = $rootNamespace;
+
+                if (array_key_exists('rootNamespace', $item) && $item['rootNamespace'] !== '') {
+                    $rootNamespaceForItem = explode('\\', $item['rootNamespace']);
+
+                    $rootNamespaceForItem = array_filter($rootNamespaceForItem);
+                }
+
                 if (array_key_exists('namespace', $item) && $item['namespace'] !== '') {
                     $groupNamespace = trim($item['namespace'], '\\');
                     $itemNamespace = array_merge($itemNamespace, explode('\\', $groupNamespace));
@@ -123,7 +149,7 @@ final class DefaultDefinitionConverter implements DefinitionConverter
                     $models->add($this->convertModelElement(
                         $modelRegister,
                         $models,
-                        $rootNamespace,
+                        $rootNamespaceForItem,
                         $itemNamespace,
                         $childItem,
                         $allDefinedModelNames,
