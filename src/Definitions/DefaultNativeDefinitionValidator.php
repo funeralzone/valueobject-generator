@@ -22,6 +22,7 @@ final class DefaultNativeDefinitionValidator implements NativeDefinitionValidato
     ];
 
     private $modelGroupSchemaRules = [
+        'rootNamespace' => 'string',
         'namespace' => 'string',
         'model' => 'required|array'
     ];
